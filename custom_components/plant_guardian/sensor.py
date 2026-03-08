@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from homeassistant.components.sensor import SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -15,7 +16,6 @@ from .const import (
     ATTR_LAST_WATERED,
     ATTR_PROBLEM,
     ATTR_SPECIES,
-    CONF_PLANT_NAME,
 )
 from .entity import PlantGuardianEntity
 
@@ -26,13 +26,33 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     plant_entry = entry
-    async_add_entities(
-        [
-            PlantGuardianStatusSensor(plant_entry),
-            PlantGuardianDaysSinceWateredSensor(plant_entry),
-            PlantGuardianDaysSinceFertilizedSensor(plant_entry),
-        ]
-    )
+
+    entities: list[SensorEntity] = [
+        PlantGuardianStatusSensor(plant_entry),
+        PlantGuardianDaysSinceWateredSensor(plant_entry),
+        PlantGuardianDaysSinceFertilizedSensor(plant_entry),
+    ]
+
+    # Add mirrored plant sensors only if the linked source sensors exist
+    if getattr(plant_entry.options, "get", None):
+        moisture_entity = plant_entry.options.get("moisture_entity", plant_entry.data.get("moisture_entity"))
+        light_entity = plant_entry.options.get("light_entity", plant_entry.data.get("light_entity"))
+        temp_entity = plant_entry.options.get("temp_entity", plant_entry.data.get("temp_entity"))
+    else:
+        moisture_entity = plant_entry.data.get("moisture_entity")
+        light_entity = plant_entry.data.get("light_entity")
+        temp_entity = plant_entry.data.get("temp_entity")
+
+    if moisture_entity:
+        entities.append(PlantGuardianMoistureSensor(plant_entry))
+
+    if light_entity:
+        entities.append(PlantGuardianLightSensor(plant_entry))
+
+    if temp_entity:
+        entities.append(PlantGuardianTemperatureSensor(plant_entry))
+
+    async_add_entities(entities)
 
 
 class PlantGuardianStatusSensor(PlantGuardianEntity, SensorEntity):
@@ -92,3 +112,48 @@ class PlantGuardianDaysSinceFertilizedSensor(PlantGuardianEntity, SensorEntity):
     @property
     def native_value(self) -> int | None:
         return self.coordinator.data.days_since_fertilized
+
+
+class PlantGuardianMoistureSensor(PlantGuardianEntity, SensorEntity):
+    _attr_icon = "mdi:water-percent"
+    _attr_native_unit_of_measurement = "%"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, entry: PlantGuardianConfigEntry) -> None:
+        super().__init__(entry)
+        self._attr_name = "Moisture"
+        self._attr_unique_id = f"{entry.entry_id}_moisture"
+
+    @property
+    def native_value(self) -> float | int | None:
+        return self.coordinator.data.moisture
+
+
+class PlantGuardianLightSensor(PlantGuardianEntity, SensorEntity):
+    _attr_icon = "mdi:white-balance-sunny"
+    _attr_native_unit_of_measurement = "lx"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, entry: PlantGuardianConfigEntry) -> None:
+        super().__init__(entry)
+        self._attr_name = "Light"
+        self._attr_unique_id = f"{entry.entry_id}_light"
+
+    @property
+    def native_value(self) -> float | int | None:
+        return self.coordinator.data.light
+
+
+class PlantGuardianTemperatureSensor(PlantGuardianEntity, SensorEntity):
+    _attr_icon = "mdi:thermometer"
+    _attr_native_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, entry: PlantGuardianConfigEntry) -> None:
+        super().__init__(entry)
+        self._attr_name = "Temperature"
+        self._attr_unique_id = f"{entry.entry_id}_temperature"
+
+    @property
+    def native_value(self) -> float | int | None:
+        return self.coordinator.data.temperature
