@@ -14,6 +14,19 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+
+def _safe_float(hass, entity_id):
+    if not entity_id:
+        return None
+    state = hass.states.get(entity_id)
+    if state is None or state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+        return None
+    try:
+        return float(state.state)
+    except (TypeError, ValueError):
+        return None
+        
 from .const import (
     ATTR_CARE_SUMMARY,
     ATTR_DAYS_SINCE_FERTILIZED,
