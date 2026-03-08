@@ -1,0 +1,57 @@
+{
+  "title": "Plant Guardian",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add plant",
+        "description": "Create a tracked plant using your existing Home Assistant sensors.",
+        "data": {
+          "plant_name": "Plant name",
+          "species": "Species (optional)",
+          "image_url": "Image URL (optional)",
+          "moisture_entity": "Moisture sensor",
+          "light_entity": "Light sensor (optional)",
+          "temp_entity": "Temperature sensor (optional)",
+          "moisture_min": "Minimum moisture",
+          "light_min": "Minimum light",
+          "temp_min": "Minimum temperature",
+          "temp_max": "Maximum temperature",
+          "watering_interval_days": "Watering interval (days)",
+          "fertilizing_interval_days": "Fertilizing interval (days)"
+        }
+      }
+    },
+    "error": {
+      "temp_range_invalid": "Minimum temperature must be less than or equal to maximum temperature.",
+      "required": "This field is required."
+    },
+    "abort": {
+      "already_configured": "This plant already exists."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Edit plant",
+        "description": "Update this plant's sensors, image, and care thresholds.",
+        "data": {
+          "plant_name": "Plant name",
+          "species": "Species (optional)",
+          "image_url": "Image URL (optional)",
+          "moisture_entity": "Moisture sensor",
+          "light_entity": "Light sensor (optional)",
+          "temp_entity": "Temperature sensor (optional)",
+          "moisture_min": "Minimum moisture",
+          "light_min": "Minimum light",
+          "temp_min": "Minimum temperature",
+          "temp_max": "Maximum temperature",
+          "watering_interval_days": "Watering interval (days)",
+          "fertilizing_interval_days": "Fertilizing interval (days)"
+        }
+      }
+    },
+    "error": {
+      "temp_range_invalid": "Minimum temperature must be less than or equal to maximum temperature."
+    }
+  }
+}
