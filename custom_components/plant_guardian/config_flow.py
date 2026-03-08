@@ -46,7 +46,7 @@ def _build_schema(defaults: dict | None = None) -> vol.Schema:
         ): selector.TextSelector(
             selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
         ),
-        vol.Required(
+        vol.Optional(
             CONF_MOISTURE_ENTITY,
             default=defaults.get(CONF_MOISTURE_ENTITY),
         ): selector.EntitySelector(
