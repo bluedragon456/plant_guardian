@@ -1,7 +1,7 @@
 {
   "domain": "plant_guardian",
   "name": "Plant Guardian",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "documentation": "https://github.com/YOUR_GITHUB/plant-guardian",
   "issue_tracker": "https://github.com/YOUR_GITHUB/plant-guardian/issues",
   "codeowners": ["@YOUR_GITHUB"],
