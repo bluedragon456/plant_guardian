@@ -10,11 +10,14 @@ permissions:
 
 jobs:
   release:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Get current version
         id: version
@@ -40,6 +43,10 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add custom_components/plant_guardian/manifest.json
+          if git diff --cached --quiet; then
+            echo "No manifest change to commit"
+            exit 0
+          fi
           git commit -m "Auto bump version to ${{ steps.bump.outputs.new }}"
           git push
 
