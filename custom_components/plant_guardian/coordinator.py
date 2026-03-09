@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 import logging
@@ -14,28 +13,7 @@ from homeassistant.helpers.storage import Store
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
-
-def _safe_float(hass, entity_id):
-    if not entity_id:
-        return None
-    state = hass.states.get(entity_id)
-    if state is None or state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
-        return None
-    try:
-        return float(state.state)
-    except (TypeError, ValueError):
-        return None
-        
 from .const import (
-    ATTR_CARE_SUMMARY,
-    ATTR_DAYS_SINCE_FERTILIZED,
-    ATTR_DAYS_SINCE_WATERED,
-    ATTR_IMAGE,
-    ATTR_LAST_FERTILIZED,
-    ATTR_LAST_WATERED,
-    ATTR_PROBLEM,
-    ATTR_SPECIES,
     CONF_FERTILIZING_INTERVAL_DAYS,
     CONF_IMAGE_URL,
     CONF_LIGHT_ENTITY,
@@ -54,6 +32,7 @@ from .const import (
     STATE_HEALTHY,
     STATE_HOT,
     STATE_LOW_LIGHT,
+    STATE_NEEDS_CARE,
     STATE_NEEDS_FERTILIZER,
     STATE_NEEDS_WATERING,
     STATE_UNKNOWN as PLANT_STATE_UNKNOWN,
@@ -88,7 +67,7 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
             hass,
             _LOGGER,
             name=f"{DOMAIN}_{entry.entry_id}",
-            update_interval=None,
+            update_interval=timedelta(hours=1),
         )
         self.entry = entry
         self._store = Store[dict[str, Any]](
@@ -152,9 +131,13 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
         )
 
     def _build_data(self) -> PlantData:
-        moisture = self._safe_float(self._conf(CONF_MOISTURE_ENTITY))
-        light = self._safe_float(self._conf(CONF_LIGHT_ENTITY))
-        temp = self._safe_float(self._conf(CONF_TEMP_ENTITY))
+        moisture_entity = self._conf(CONF_MOISTURE_ENTITY)
+        light_entity = self._conf(CONF_LIGHT_ENTITY)
+        temp_entity = self._conf(CONF_TEMP_ENTITY)
+
+        moisture = self._safe_float(moisture_entity)
+        light = self._safe_float(light_entity)
+        temp = self._safe_float(temp_entity)
 
         moisture_min = float(self._conf(CONF_MOISTURE_MIN))
         light_min = float(self._conf(CONF_LIGHT_MIN))
@@ -166,37 +149,48 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
         days_since_watered = _days_since(self._last_watered)
         days_since_fertilized = _days_since(self._last_fertilized)
 
-        status = PLANT_STATE_UNKNOWN
-        problem = "moisture_unavailable"
+        configured_entities = [entity_id for entity_id in (moisture_entity, light_entity, temp_entity) if entity_id]
 
-        if moisture is not None:
-            status = STATE_HEALTHY
-            problem = "none"
+        status = STATE_HEALTHY
+        problem = "none"
 
-            if moisture < moisture_min:
-                status = STATE_DRY
-                problem = STATE_DRY
-            elif light is not None and light < light_min:
-                status = STATE_LOW_LIGHT
-                problem = STATE_LOW_LIGHT
-            elif temp is not None and temp < temp_min:
-                status = STATE_COLD
-                problem = STATE_COLD
-            elif temp is not None and temp > temp_max:
-                status = STATE_HOT
-                problem = STATE_HOT
-            elif days_since_watered is not None and days_since_watered >= watering_interval_days:
-                status = STATE_NEEDS_WATERING
-                problem = STATE_NEEDS_WATERING
-            elif (
+        if configured_entities and moisture is None and light is None and temp is None:
+            status = PLANT_STATE_UNKNOWN
+            problem = "sensors_unavailable"
+        elif moisture is not None and moisture < moisture_min:
+            status = STATE_DRY
+            problem = STATE_DRY
+        elif light is not None and light < light_min:
+            status = STATE_LOW_LIGHT
+            problem = STATE_LOW_LIGHT
+        elif temp is not None and temp < temp_min:
+            status = STATE_COLD
+            problem = STATE_COLD
+        elif temp is not None and temp > temp_max:
+            status = STATE_HOT
+            problem = STATE_HOT
+        else:
+            needs_watering = (
+                days_since_watered is not None
+                and days_since_watered >= watering_interval_days
+            )
+            needs_fertilizer = (
                 days_since_fertilized is not None
                 and days_since_fertilized >= fertilizing_interval_days
-            ):
+            )
+
+            if needs_watering and needs_fertilizer:
+                status = STATE_NEEDS_CARE
+                problem = STATE_NEEDS_CARE
+            elif needs_watering:
+                status = STATE_NEEDS_WATERING
+                problem = STATE_NEEDS_WATERING
+            elif needs_fertilizer:
                 status = STATE_NEEDS_FERTILIZER
                 problem = STATE_NEEDS_FERTILIZER
 
         care_summary = _build_care_summary(
-            plant_name=self._conf(CONF_PLANT_NAME),
+            plant_name=self.entry.title or self._conf(CONF_PLANT_NAME),
             status=status,
             days_since_watered=days_since_watered,
             watering_interval_days=watering_interval_days,
