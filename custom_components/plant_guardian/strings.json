@@ -4,12 +4,12 @@
     "step": {
       "user": {
         "title": "Add plant",
-        "description": "Create a tracked plant using your existing Home Assistant sensors.",
+        "description": "Create a tracked plant with or without sensors.",
         "data": {
           "plant_name": "Plant name",
           "species": "Species (optional)",
           "image_url": "Image URL (optional)",
-          "moisture_entity": "Moisture sensor",
+          "moisture_entity": "Moisture sensor (optional)",
           "light_entity": "Light sensor (optional)",
           "temp_entity": "Temperature sensor (optional)",
           "moisture_min": "Minimum moisture",
@@ -35,10 +35,9 @@
         "title": "Edit plant",
         "description": "Update this plant's sensors, image, and care thresholds.",
         "data": {
-          "plant_name": "Plant name",
           "species": "Species (optional)",
           "image_url": "Image URL (optional)",
-          "moisture_entity": "Moisture sensor",
+          "moisture_entity": "Moisture sensor (optional)",
           "light_entity": "Light sensor (optional)",
           "temp_entity": "Temperature sensor (optional)",
           "moisture_min": "Minimum moisture",
