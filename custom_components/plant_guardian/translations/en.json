@@ -40,7 +40,6 @@
         "title": "Edit plant",
         "description": "Update this plant's sensors, image, and care thresholds.",
         "data": {
-          "plant_name": "Plant name",
           "species": "Species (optional)",
           "image_url": "Image URL (optional)",
           "openplantbook_enabled": "Enable OpenPlantbook setup",

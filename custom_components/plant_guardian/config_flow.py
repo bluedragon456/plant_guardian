@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from typing import Any
+
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
@@ -32,7 +35,7 @@ from .const import (
 )
 
 
-def _cleanup_optional_fields(user_input: dict) -> dict:
+def _cleanup_optional_fields(user_input: dict[str, Any]) -> dict[str, Any]:
     cleaned = dict(user_input)
 
     for key in (
@@ -55,14 +58,36 @@ def _cleanup_optional_fields(user_input: dict) -> dict:
     return cleaned
 
 
-def _add_optional_entity_selector(schema: dict, key: str, defaults: dict) -> None:
-    if defaults.get(key):
-        schema[
-            vol.Optional(
-                key,
-                default=defaults[key],
-            )
-        ] = selector.EntitySelector(
+def _normalize_defaults(defaults: dict[str, Any] | None = None) -> dict[str, Any]:
+    data = dict(defaults or {})
+    return {
+        CONF_PLANT_NAME: str(data.get(CONF_PLANT_NAME) or ""),
+        CONF_SPECIES: str(data.get(CONF_SPECIES) or ""),
+        CONF_IMAGE_URL: str(data.get(CONF_IMAGE_URL) or ""),
+        CONF_OPENPLANTBOOK_ENABLED: bool(data.get(CONF_OPENPLANTBOOK_ENABLED, False)),
+        CONF_OPENPLANTBOOK_PID: str(data.get(CONF_OPENPLANTBOOK_PID) or ""),
+        CONF_OPENPLANTBOOK_SYNC_IMAGE: bool(data.get(CONF_OPENPLANTBOOK_SYNC_IMAGE, True)),
+        CONF_OPENPLANTBOOK_SYNC_CARE: bool(data.get(CONF_OPENPLANTBOOK_SYNC_CARE, False)),
+        CONF_MOISTURE_ENTITY: data.get(CONF_MOISTURE_ENTITY),
+        CONF_LIGHT_ENTITY: data.get(CONF_LIGHT_ENTITY),
+        CONF_TEMP_ENTITY: data.get(CONF_TEMP_ENTITY),
+        CONF_MOISTURE_MIN: float(data.get(CONF_MOISTURE_MIN, DEFAULT_MOISTURE_MIN)),
+        CONF_LIGHT_MIN: float(data.get(CONF_LIGHT_MIN, DEFAULT_LIGHT_MIN)),
+        CONF_TEMP_MIN: float(data.get(CONF_TEMP_MIN, DEFAULT_TEMP_MIN)),
+        CONF_TEMP_MAX: float(data.get(CONF_TEMP_MAX, DEFAULT_TEMP_MAX)),
+        CONF_WATERING_INTERVAL_DAYS: int(
+            data.get(CONF_WATERING_INTERVAL_DAYS, DEFAULT_WATERING_INTERVAL_DAYS)
+        ),
+        CONF_FERTILIZING_INTERVAL_DAYS: int(
+            data.get(CONF_FERTILIZING_INTERVAL_DAYS, DEFAULT_FERTILIZING_INTERVAL_DAYS)
+        ),
+    }
+
+
+def _add_optional_entity_selector(schema: dict, key: str, defaults: dict[str, Any]) -> None:
+    default_value = defaults.get(key)
+    if default_value:
+        schema[vol.Optional(key, default=default_value)] = selector.EntitySelector(
             selector.EntitySelectorConfig(domain="sensor")
         )
     else:
@@ -71,154 +96,51 @@ def _add_optional_entity_selector(schema: dict, key: str, defaults: dict) -> Non
         )
 
 
-def _build_schema(defaults: dict | None = None, *, include_name: bool = True) -> vol.Schema:
-    defaults = defaults or {}
+def _build_schema(defaults: dict[str, Any] | None = None, *, include_name: bool = True) -> vol.Schema:
+    defaults = _normalize_defaults(defaults)
     schema: dict = {}
 
     if include_name:
-        schema[
-            vol.Required(
-                CONF_PLANT_NAME,
-                default=defaults.get(CONF_PLANT_NAME, ""),
-            )
-        ] = selector.TextSelector()
+        schema[vol.Required(CONF_PLANT_NAME, default=defaults[CONF_PLANT_NAME])] = selector.TextSelector()
 
-    schema[
-        vol.Optional(
-            CONF_SPECIES,
-            default=defaults.get(CONF_SPECIES, ""),
-        )
-    ] = selector.TextSelector()
-
-    schema[
-        vol.Optional(
-            CONF_IMAGE_URL,
-            default=defaults.get(CONF_IMAGE_URL, ""),
-        )
-    ] = selector.TextSelector(
-        selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
-    )
-
-    schema[
-        vol.Optional(
-            CONF_OPENPLANTBOOK_ENABLED,
-            default=defaults.get(CONF_OPENPLANTBOOK_ENABLED, False),
-        )
-    ] = selector.BooleanSelector()
-
-    schema[
-        vol.Optional(
-            CONF_OPENPLANTBOOK_PID,
-            default=defaults.get(CONF_OPENPLANTBOOK_PID, ""),
-        )
-    ] = selector.TextSelector()
-
-    schema[
-        vol.Optional(
-            CONF_OPENPLANTBOOK_SYNC_IMAGE,
-            default=defaults.get(CONF_OPENPLANTBOOK_SYNC_IMAGE, True),
-        )
-    ] = selector.BooleanSelector()
-
-    schema[
-        vol.Optional(
-            CONF_OPENPLANTBOOK_SYNC_CARE,
-            default=defaults.get(CONF_OPENPLANTBOOK_SYNC_CARE, False),
-        )
-    ] = selector.BooleanSelector()
+    schema[vol.Optional(CONF_SPECIES, default=defaults[CONF_SPECIES])] = selector.TextSelector()
+    schema[vol.Optional(CONF_IMAGE_URL, default=defaults[CONF_IMAGE_URL])] = selector.TextSelector()
+    schema[vol.Optional(CONF_OPENPLANTBOOK_ENABLED, default=defaults[CONF_OPENPLANTBOOK_ENABLED])] = selector.BooleanSelector()
+    schema[vol.Optional(CONF_OPENPLANTBOOK_PID, default=defaults[CONF_OPENPLANTBOOK_PID])] = selector.TextSelector()
+    schema[vol.Optional(CONF_OPENPLANTBOOK_SYNC_IMAGE, default=defaults[CONF_OPENPLANTBOOK_SYNC_IMAGE])] = selector.BooleanSelector()
+    schema[vol.Optional(CONF_OPENPLANTBOOK_SYNC_CARE, default=defaults[CONF_OPENPLANTBOOK_SYNC_CARE])] = selector.BooleanSelector()
 
     _add_optional_entity_selector(schema, CONF_MOISTURE_ENTITY, defaults)
     _add_optional_entity_selector(schema, CONF_LIGHT_ENTITY, defaults)
     _add_optional_entity_selector(schema, CONF_TEMP_ENTITY, defaults)
 
-    schema[
-        vol.Required(
-            CONF_MOISTURE_MIN,
-            default=defaults.get(CONF_MOISTURE_MIN, DEFAULT_MOISTURE_MIN),
-        )
-    ] = selector.NumberSelector(
-        selector.NumberSelectorConfig(
-            min=0,
-            max=100,
-            step=1,
-            mode=selector.NumberSelectorMode.BOX,
-        )
+    schema[vol.Required(CONF_MOISTURE_MIN, default=defaults[CONF_MOISTURE_MIN])] = selector.NumberSelector(
+        selector.NumberSelectorConfig(min=0, max=100, step=1, mode=selector.NumberSelectorMode.BOX)
     )
-
-    schema[
-        vol.Required(
-            CONF_LIGHT_MIN,
-            default=defaults.get(CONF_LIGHT_MIN, DEFAULT_LIGHT_MIN),
-        )
-    ] = selector.NumberSelector(
-        selector.NumberSelectorConfig(
-            min=0,
-            max=200000,
-            step=10,
-            mode=selector.NumberSelectorMode.BOX,
-        )
+    schema[vol.Required(CONF_LIGHT_MIN, default=defaults[CONF_LIGHT_MIN])] = selector.NumberSelector(
+        selector.NumberSelectorConfig(min=0, max=200000, step=10, mode=selector.NumberSelectorMode.BOX)
     )
-
-    schema[
-        vol.Required(
-            CONF_TEMP_MIN,
-            default=defaults.get(CONF_TEMP_MIN, DEFAULT_TEMP_MIN),
-        )
-    ] = selector.NumberSelector(
-        selector.NumberSelectorConfig(
-            min=-50,
-            max=150,
-            step=1,
-            mode=selector.NumberSelectorMode.BOX,
-        )
+    schema[vol.Required(CONF_TEMP_MIN, default=defaults[CONF_TEMP_MIN])] = selector.NumberSelector(
+        selector.NumberSelectorConfig(min=-50, max=150, step=1, mode=selector.NumberSelectorMode.BOX)
     )
-
-    schema[
-        vol.Required(
-            CONF_TEMP_MAX,
-            default=defaults.get(CONF_TEMP_MAX, DEFAULT_TEMP_MAX),
-        )
-    ] = selector.NumberSelector(
-        selector.NumberSelectorConfig(
-            min=-50,
-            max=150,
-            step=1,
-            mode=selector.NumberSelectorMode.BOX,
-        )
+    schema[vol.Required(CONF_TEMP_MAX, default=defaults[CONF_TEMP_MAX])] = selector.NumberSelector(
+        selector.NumberSelectorConfig(min=-50, max=150, step=1, mode=selector.NumberSelectorMode.BOX)
     )
-
     schema[
         vol.Required(
             CONF_WATERING_INTERVAL_DAYS,
-            default=defaults.get(
-                CONF_WATERING_INTERVAL_DAYS,
-                DEFAULT_WATERING_INTERVAL_DAYS,
-            ),
+            default=defaults[CONF_WATERING_INTERVAL_DAYS],
         )
     ] = selector.NumberSelector(
-        selector.NumberSelectorConfig(
-            min=1,
-            max=365,
-            step=1,
-            mode=selector.NumberSelectorMode.BOX,
-        )
+        selector.NumberSelectorConfig(min=1, max=365, step=1, mode=selector.NumberSelectorMode.BOX)
     )
-
     schema[
         vol.Required(
             CONF_FERTILIZING_INTERVAL_DAYS,
-            default=defaults.get(
-                CONF_FERTILIZING_INTERVAL_DAYS,
-                DEFAULT_FERTILIZING_INTERVAL_DAYS,
-            ),
+            default=defaults[CONF_FERTILIZING_INTERVAL_DAYS],
         )
     ] = selector.NumberSelector(
-        selector.NumberSelectorConfig(
-            min=1,
-            max=365,
-            step=1,
-            mode=selector.NumberSelectorMode.BOX,
-        )
+        selector.NumberSelectorConfig(min=1, max=365, step=1, mode=selector.NumberSelectorMode.BOX)
     )
 
     return vol.Schema(schema)
@@ -227,7 +149,14 @@ def _build_schema(defaults: dict | None = None, *, include_name: bool = True) ->
 class PlantGuardianConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
-    async def async_step_user(self, user_input=None):
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        return PlantGuardianOptionsFlow(config_entry)
+
+    async def async_step_user(self, user_input: dict[str, Any] | None = None):
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -253,16 +182,12 @@ class PlantGuardianConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    @staticmethod
-    def async_get_options_flow(config_entry):
-        return PlantGuardianOptionsFlow(config_entry)
-
 
 class PlantGuardianOptionsFlow(config_entries.OptionsFlow):
-    def __init__(self, config_entry) -> None:
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         self.config_entry = config_entry
 
-    async def async_step_init(self, user_input=None):
+    async def async_step_init(self, user_input: dict[str, Any] | None = None):
         errors: dict[str, str] = {}
 
         if user_input is not None:
@@ -276,7 +201,7 @@ class PlantGuardianOptionsFlow(config_entries.OptionsFlow):
                 user_input = _cleanup_optional_fields(user_input)
                 return self.async_create_entry(title="", data=user_input)
 
-        defaults = {**self.config_entry.data, **self.config_entry.options}
+        defaults = _normalize_defaults({**self.config_entry.data, **self.config_entry.options})
         return self.async_show_form(
             step_id="init",
             data_schema=_build_schema(defaults, include_name=False),
