@@ -22,6 +22,10 @@ CONF_TEMP_MIN = "temp_min"
 CONF_TEMP_MAX = "temp_max"
 CONF_WATERING_INTERVAL_DAYS = "watering_interval_days"
 CONF_FERTILIZING_INTERVAL_DAYS = "fertilizing_interval_days"
+CONF_OPENPLANTBOOK_ENABLED = "openplantbook_enabled"
+CONF_OPENPLANTBOOK_PID = "openplantbook_pid"
+CONF_OPENPLANTBOOK_SYNC_IMAGE = "openplantbook_sync_image"
+CONF_OPENPLANTBOOK_SYNC_CARE = "openplantbook_sync_care"
 
 DEFAULT_MOISTURE_MIN = 25.0
 DEFAULT_LIGHT_MIN = 300.0
@@ -38,6 +42,10 @@ ATTR_CARE_SUMMARY = "care_summary"
 ATTR_PROBLEM = "problem"
 ATTR_IMAGE = "image"
 ATTR_SPECIES = "species"
+ATTR_TAGS = "tags"
+ATTR_NEEDS_CARE = "needs_care"
+ATTR_IMAGE_SOURCE = "image_source"
+ATTR_CARE_SOURCE = "care_source"
 
 STATE_HEALTHY = "healthy"
 STATE_DRY = "dry"

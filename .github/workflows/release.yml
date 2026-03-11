@@ -1,7 +1,12 @@
-name: Release Plant Guardian
+name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, for example 1.0.0"
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -11,41 +16,58 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Check out repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Get current version
-        id: version
-        run: |
-          VERSION=$(grep '"version"' custom_components/plant_guardian/manifest.json | cut -d '"' -f4)
-          echo "current=$VERSION" >> $GITHUB_OUTPUT
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Bump patch version
-        id: bump
+      - name: Validate version input
         run: |
-          VERSION="${{ steps.version.outputs.current }}"
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
-          PATCH=$((PATCH + 1))
-          NEW_VERSION="$MAJOR.$MINOR.$PATCH"
-          echo "new=$NEW_VERSION" >> $GITHUB_OUTPUT
+          python - <<'PY'
+          import re
+          import sys
+          version = "${{ github.event.inputs.version }}"
+          if not re.fullmatch(r"\d+\.\d+\.\d+", version):
+              print(f"Invalid version: {version}")
+              sys.exit(1)
+          print(f"Version OK: {version}")
+          PY
 
-      - name: Update manifest.json
+      - name: Update manifest version
         run: |
-          sed -i "s/\"version\": \".*\"/\"version\": \"${{ steps.bump.outputs.new }}\"/" custom_components/plant_guardian/manifest.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          version = "${{ github.event.inputs.version }}"
+          manifest_path = Path("custom_components/plant_guardian/manifest.json")
+
+          data = json.loads(manifest_path.read_text(encoding="utf-8"))
+          data["version"] = version
+          manifest_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+          print(f"Updated manifest.json to {version}")
+          PY
 
       - name: Commit version bump
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
           git add custom_components/plant_guardian/manifest.json
-          git commit -m "Release v${{ steps.bump.outputs.new }}"
-          git push
+          git commit -m "Release v${{ github.event.inputs.version }}" || echo "No changes to commit"
+
+      - name: Create and push tag
+        run: |
+          git tag "v${{ github.event.inputs.version }}"
+          git push origin main
+          git push origin "v${{ github.event.inputs.version }}"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.bump.outputs.new }}
-          name: Plant Guardian v${{ steps.bump.outputs.new }}
-          generate_release_notes: true
+          tag_name: v${{ github.event.inputs.version }}
+          name: v${{ github.event.inputs.version }}

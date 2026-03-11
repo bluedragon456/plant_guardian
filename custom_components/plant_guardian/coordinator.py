@@ -20,6 +20,8 @@ from .const import (
     CONF_LIGHT_MIN,
     CONF_MOISTURE_ENTITY,
     CONF_MOISTURE_MIN,
+    CONF_OPENPLANTBOOK_SYNC_CARE,
+    CONF_OPENPLANTBOOK_SYNC_IMAGE,
     CONF_PLANT_NAME,
     CONF_SPECIES,
     CONF_TEMP_ENTITY,
@@ -39,6 +41,8 @@ from .const import (
     STORAGE_KEY_PREFIX,
     STORAGE_VERSION,
 )
+from .openplantbook import OpenPlantbookClient
+from .presentation import status_needs_care, status_tags
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,6 +51,8 @@ _LOGGER = logging.getLogger(__name__)
 class PlantData:
     status: str
     problem: str
+    needs_care: bool
+    tags: list[str]
     moisture: float | None
     light: float | None
     temperature: float | None
@@ -55,8 +61,10 @@ class PlantData:
     days_since_watered: int | None
     days_since_fertilized: int | None
     image: str | None
+    image_source: str | None
     species: str | None
     care_summary: str
+    care_source: str | None
 
 
 class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
@@ -75,6 +83,7 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
             STORAGE_VERSION,
             f"{STORAGE_KEY_PREFIX}_{entry.entry_id}",
         )
+        self._openplantbook = OpenPlantbookClient(hass, entry)
         self._unsub: CALLBACK_TYPE | None = None
         self._last_watered: datetime | None = None
         self._last_fertilized: datetime | None = None
@@ -106,21 +115,21 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
             self._unsub = None
 
     async def _async_update_data(self) -> PlantData:
-        return self._build_data()
+        return await self._async_build_data()
 
     @callback
     def _handle_source_change(self, event) -> None:
-        self.async_set_updated_data(self._build_data())
+        self.hass.async_create_task(self.async_refresh())
 
     async def async_mark_watered_now(self) -> None:
         self._last_watered = dt_util.now()
         await self._async_save_state()
-        self.async_set_updated_data(self._build_data())
+        await self.async_refresh()
 
     async def async_mark_fertilized_now(self) -> None:
         self._last_fertilized = dt_util.now()
         await self._async_save_state()
-        self.async_set_updated_data(self._build_data())
+        await self.async_refresh()
 
     async def _async_save_state(self) -> None:
         await self._store.async_save(
@@ -130,7 +139,9 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
             }
         )
 
-    def _build_data(self) -> PlantData:
+    async def _async_build_data(self) -> PlantData:
+        openplantbook = await self._openplantbook.async_fetch_plant_details()
+
         moisture_entity = self._conf(CONF_MOISTURE_ENTITY)
         light_entity = self._conf(CONF_LIGHT_ENTITY)
         temp_entity = self._conf(CONF_TEMP_ENTITY)
@@ -139,12 +150,9 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
         light = self._safe_float(light_entity)
         temp = self._safe_float(temp_entity)
 
-        moisture_min = float(self._conf(CONF_MOISTURE_MIN))
-        light_min = float(self._conf(CONF_LIGHT_MIN))
-        temp_min = float(self._conf(CONF_TEMP_MIN))
-        temp_max = float(self._conf(CONF_TEMP_MAX))
-        watering_interval_days = int(self._conf(CONF_WATERING_INTERVAL_DAYS))
-        fertilizing_interval_days = int(self._conf(CONF_FERTILIZING_INTERVAL_DAYS))
+        moisture_min, light_min, temp_min, temp_max, watering_interval_days, fertilizing_interval_days, care_source = (
+            self._resolve_care_config(openplantbook)
+        )
 
         days_since_watered = _days_since(self._last_watered)
         days_since_fertilized = _days_since(self._last_fertilized)
@@ -189,6 +197,11 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
                 status = STATE_NEEDS_FERTILIZER
                 problem = STATE_NEEDS_FERTILIZER
 
+        image, image_source = self._resolve_image(openplantbook)
+        tags = status_tags(status)
+        needs_care = status_needs_care(status)
+        species = self._conf(CONF_SPECIES) or (openplantbook.pid if openplantbook else None)
+
         care_summary = _build_care_summary(
             plant_name=self.entry.title or self._conf(CONF_PLANT_NAME),
             status=status,
@@ -201,6 +214,8 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
         return PlantData(
             status=status,
             problem=problem,
+            needs_care=needs_care,
+            tags=tags,
             moisture=moisture,
             light=light,
             temperature=temp,
@@ -208,9 +223,62 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
             last_fertilized=self._last_fertilized.isoformat() if self._last_fertilized else None,
             days_since_watered=days_since_watered,
             days_since_fertilized=days_since_fertilized,
-            image=self._conf(CONF_IMAGE_URL),
-            species=self._conf(CONF_SPECIES),
+            image=image,
+            image_source=image_source,
+            species=species,
             care_summary=care_summary,
+            care_source=care_source,
+        )
+
+    def _resolve_image(self, openplantbook) -> tuple[str | None, str | None]:
+        image_url = self._conf(CONF_IMAGE_URL)
+        sync_image = bool(self._conf(CONF_OPENPLANTBOOK_SYNC_IMAGE))
+
+        if image_url:
+            return image_url, "user"
+
+        if sync_image and openplantbook and openplantbook.image_url:
+            return openplantbook.image_url, "openplantbook"
+
+        return None, None
+
+    def _resolve_care_config(self, openplantbook) -> tuple[float, float, float, float, int, int, str]:
+        sync_care = bool(self._conf(CONF_OPENPLANTBOOK_SYNC_CARE))
+
+        moisture_min = float(self._conf(CONF_MOISTURE_MIN))
+        light_min = float(self._conf(CONF_LIGHT_MIN))
+        temp_min = float(self._conf(CONF_TEMP_MIN))
+        temp_max = float(self._conf(CONF_TEMP_MAX))
+        watering_interval_days = int(self._conf(CONF_WATERING_INTERVAL_DAYS))
+        fertilizing_interval_days = int(self._conf(CONF_FERTILIZING_INTERVAL_DAYS))
+
+        if sync_care and openplantbook:
+            moisture_min = float(openplantbook.moisture_min or moisture_min)
+            light_min = float(openplantbook.light_min or light_min)
+            temp_min = float(openplantbook.temp_min or temp_min)
+            temp_max = float(openplantbook.temp_max or temp_max)
+            watering_interval_days = int(openplantbook.watering_interval_days or watering_interval_days)
+            fertilizing_interval_days = int(
+                openplantbook.fertilizing_interval_days or fertilizing_interval_days
+            )
+            return (
+                moisture_min,
+                light_min,
+                temp_min,
+                temp_max,
+                watering_interval_days,
+                fertilizing_interval_days,
+                "openplantbook",
+            )
+
+        return (
+            moisture_min,
+            light_min,
+            temp_min,
+            temp_max,
+            watering_interval_days,
+            fertilizing_interval_days,
+            "manual",
         )
 
     def _safe_float(self, entity_id: str | None) -> float | None:

@@ -12,6 +12,10 @@ from .const import (
     CONF_LIGHT_MIN,
     CONF_MOISTURE_ENTITY,
     CONF_MOISTURE_MIN,
+    CONF_OPENPLANTBOOK_ENABLED,
+    CONF_OPENPLANTBOOK_PID,
+    CONF_OPENPLANTBOOK_SYNC_CARE,
+    CONF_OPENPLANTBOOK_SYNC_IMAGE,
     CONF_PLANT_NAME,
     CONF_SPECIES,
     CONF_TEMP_ENTITY,
@@ -37,9 +41,16 @@ def _cleanup_optional_fields(user_input: dict) -> dict:
         CONF_TEMP_ENTITY,
         CONF_SPECIES,
         CONF_IMAGE_URL,
+        CONF_OPENPLANTBOOK_PID,
     ):
         if not cleaned.get(key):
             cleaned.pop(key, None)
+
+    if not cleaned.get(CONF_OPENPLANTBOOK_ENABLED):
+        cleaned.pop(CONF_OPENPLANTBOOK_ENABLED, None)
+        cleaned.pop(CONF_OPENPLANTBOOK_PID, None)
+        cleaned.pop(CONF_OPENPLANTBOOK_SYNC_IMAGE, None)
+        cleaned.pop(CONF_OPENPLANTBOOK_SYNC_CARE, None)
 
     return cleaned
 
@@ -87,6 +98,34 @@ def _build_schema(defaults: dict | None = None, *, include_name: bool = True) ->
     ] = selector.TextSelector(
         selector.TextSelectorConfig(type=selector.TextSelectorType.URL)
     )
+
+    schema[
+        vol.Optional(
+            CONF_OPENPLANTBOOK_ENABLED,
+            default=defaults.get(CONF_OPENPLANTBOOK_ENABLED, False),
+        )
+    ] = selector.BooleanSelector()
+
+    schema[
+        vol.Optional(
+            CONF_OPENPLANTBOOK_PID,
+            default=defaults.get(CONF_OPENPLANTBOOK_PID, ""),
+        )
+    ] = selector.TextSelector()
+
+    schema[
+        vol.Optional(
+            CONF_OPENPLANTBOOK_SYNC_IMAGE,
+            default=defaults.get(CONF_OPENPLANTBOOK_SYNC_IMAGE, True),
+        )
+    ] = selector.BooleanSelector()
+
+    schema[
+        vol.Optional(
+            CONF_OPENPLANTBOOK_SYNC_CARE,
+            default=defaults.get(CONF_OPENPLANTBOOK_SYNC_CARE, False),
+        )
+    ] = selector.BooleanSelector()
 
     _add_optional_entity_selector(schema, CONF_MOISTURE_ENTITY, defaults)
     _add_optional_entity_selector(schema, CONF_LIGHT_ENTITY, defaults)
@@ -199,6 +238,8 @@ class PlantGuardianConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors[CONF_PLANT_NAME] = "required"
             elif user_input[CONF_TEMP_MIN] > user_input[CONF_TEMP_MAX]:
                 errors["base"] = "temp_range_invalid"
+            elif user_input.get(CONF_OPENPLANTBOOK_ENABLED) and not user_input.get(CONF_OPENPLANTBOOK_PID):
+                errors["base"] = "openplantbook_pid_required"
             else:
                 user_input = _cleanup_optional_fields(user_input)
                 await self.async_set_unique_id(plant_name.lower())
@@ -229,6 +270,8 @@ class PlantGuardianOptionsFlow(config_entries.OptionsFlow):
 
             if user_input[CONF_TEMP_MIN] > user_input[CONF_TEMP_MAX]:
                 errors["base"] = "temp_range_invalid"
+            elif user_input.get(CONF_OPENPLANTBOOK_ENABLED) and not user_input.get(CONF_OPENPLANTBOOK_PID):
+                errors["base"] = "openplantbook_pid_required"
             else:
                 user_input = _cleanup_optional_fields(user_input)
                 return self.async_create_entry(title="", data=user_input)

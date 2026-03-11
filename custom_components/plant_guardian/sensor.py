@@ -7,19 +7,24 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .__init__ import PlantGuardianConfigEntry
 from .const import (
+    ATTR_CARE_SOURCE,
     ATTR_CARE_SUMMARY,
     ATTR_DAYS_SINCE_FERTILIZED,
     ATTR_DAYS_SINCE_WATERED,
     ATTR_IMAGE,
+    ATTR_IMAGE_SOURCE,
     ATTR_LAST_FERTILIZED,
     ATTR_LAST_WATERED,
+    ATTR_NEEDS_CARE,
     ATTR_PROBLEM,
     ATTR_SPECIES,
+    ATTR_TAGS,
     CONF_LIGHT_ENTITY,
     CONF_MOISTURE_ENTITY,
     CONF_TEMP_ENTITY,
 )
 from .entity import PlantGuardianEntity
+from .presentation import status_icon
 
 
 async def async_setup_entry(
@@ -50,12 +55,18 @@ async def async_setup_entry(
 
 
 class PlantGuardianStatusSensor(PlantGuardianEntity, SensorEntity):
-    _attr_icon = "mdi:sprout"
-
     def __init__(self, entry: PlantGuardianConfigEntry) -> None:
         super().__init__(entry)
         self._attr_name = "Status"
         self._attr_unique_id = f"{entry.entry_id}_status"
+
+    @property
+    def icon(self) -> str:
+        return status_icon(self.coordinator.data.status)
+
+    @property
+    def entity_picture(self) -> str | None:
+        return self.coordinator.data.image
 
     @property
     def native_value(self) -> str:
@@ -65,13 +76,17 @@ class PlantGuardianStatusSensor(PlantGuardianEntity, SensorEntity):
     def extra_state_attributes(self) -> dict:
         return {
             ATTR_PROBLEM: self.coordinator.data.problem,
+            ATTR_NEEDS_CARE: self.coordinator.data.needs_care,
+            ATTR_TAGS: self.coordinator.data.tags,
             ATTR_LAST_WATERED: self.coordinator.data.last_watered,
             ATTR_LAST_FERTILIZED: self.coordinator.data.last_fertilized,
             ATTR_DAYS_SINCE_WATERED: self.coordinator.data.days_since_watered,
             ATTR_DAYS_SINCE_FERTILIZED: self.coordinator.data.days_since_fertilized,
             ATTR_IMAGE: self.coordinator.data.image,
+            ATTR_IMAGE_SOURCE: self.coordinator.data.image_source,
             ATTR_SPECIES: self.coordinator.data.species,
             ATTR_CARE_SUMMARY: self.coordinator.data.care_summary,
+            ATTR_CARE_SOURCE: self.coordinator.data.care_source,
             "moisture": self.coordinator.data.moisture,
             "light": self.coordinator.data.light,
             "temperature": self.coordinator.data.temperature,
