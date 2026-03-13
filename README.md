@@ -8,4 +8,4 @@ Features:
 - Days-since-care sensors
 - `needs care` binary sensor plus dashboard-friendly status tags
 - Optional plant image exposed as the status entity picture
-- OpenPlantbook setup fields for future image and care-profile sync
+- Optional OpenPlantbook sync for plant lookup, image, and care-profile data when the OpenPlantbook integration is installed

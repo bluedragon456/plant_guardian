@@ -10,5 +10,8 @@
   "config_flow": true,
   "iot_class": "local_push",
   "requirements": [],
-  "dependencies": []
+  "dependencies": [],
+  "after_dependencies": [
+    "openplantbook"
+  ]
 }

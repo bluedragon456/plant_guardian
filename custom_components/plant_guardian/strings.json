@@ -9,11 +9,11 @@
           "plant_name": "Plant name",
           "species": "Species (optional)",
           "image_url": "Image URL (optional)",
-          "openplantbook_enabled": "Enable OpenPlantbook setup",
-          "openplantbook_pid": "OpenPlantbook PID (optional until API is wired)",
+          "openplantbook_enabled": "Enable OpenPlantbook sync",
+          "openplantbook_pid": "OpenPlantbook PID override (optional)",
           "openplantbook_sync_image": "Use OpenPlantbook image when no manual image is set",
           "openplantbook_sync_care": "Use OpenPlantbook care thresholds when available",
-          "moisture_entity": "Moisture sensor (optional)",
+          "moisture_entity": "Moisture sensor",
           "light_entity": "Light sensor (optional)",
           "temp_entity": "Temperature sensor (optional)",
           "moisture_min": "Minimum moisture",
@@ -27,7 +27,6 @@
     },
     "error": {
       "temp_range_invalid": "Minimum temperature must be less than or equal to maximum temperature.",
-      "openplantbook_pid_required": "Add an OpenPlantbook PID before enabling OpenPlantbook sync.",
       "required": "This field is required."
     },
     "abort": {
@@ -42,11 +41,11 @@
         "data": {
           "species": "Species (optional)",
           "image_url": "Image URL (optional)",
-          "openplantbook_enabled": "Enable OpenPlantbook setup",
-          "openplantbook_pid": "OpenPlantbook PID (optional until API is wired)",
+          "openplantbook_enabled": "Enable OpenPlantbook sync",
+          "openplantbook_pid": "OpenPlantbook PID override (optional)",
           "openplantbook_sync_image": "Use OpenPlantbook image when no manual image is set",
           "openplantbook_sync_care": "Use OpenPlantbook care thresholds when available",
-          "moisture_entity": "Moisture sensor (optional)",
+          "moisture_entity": "Moisture sensor",
           "light_entity": "Light sensor (optional)",
           "temp_entity": "Temperature sensor (optional)",
           "moisture_min": "Minimum moisture",
@@ -59,8 +58,7 @@
       }
     },
     "error": {
-      "temp_range_invalid": "Minimum temperature must be less than or equal to maximum temperature.",
-      "openplantbook_pid_required": "Add an OpenPlantbook PID before enabling OpenPlantbook sync."
+      "temp_range_invalid": "Minimum temperature must be less than or equal to maximum temperature."
     }
   }
 }

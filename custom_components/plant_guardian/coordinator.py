@@ -252,7 +252,19 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
         watering_interval_days = int(self._conf(CONF_WATERING_INTERVAL_DAYS))
         fertilizing_interval_days = int(self._conf(CONF_FERTILIZING_INTERVAL_DAYS))
 
-        if sync_care and openplantbook:
+        has_openplantbook_care = openplantbook and any(
+            value is not None
+            for value in (
+                openplantbook.moisture_min,
+                openplantbook.light_min,
+                openplantbook.temp_min,
+                openplantbook.temp_max,
+                openplantbook.watering_interval_days,
+                openplantbook.fertilizing_interval_days,
+            )
+        )
+
+        if sync_care and has_openplantbook_care:
             moisture_min = float(openplantbook.moisture_min or moisture_min)
             light_min = float(openplantbook.light_min or light_min)
             temp_min = float(openplantbook.temp_min or temp_min)
@@ -346,3 +358,4 @@ def _build_care_summary(
         f"(target every {watering_interval_days} day(s)); {fertilized_text} "
         f"(target every {fertilizing_interval_days} day(s))."
     )
+

@@ -167,8 +167,6 @@ class PlantGuardianConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors[CONF_PLANT_NAME] = "required"
             elif user_input[CONF_TEMP_MIN] > user_input[CONF_TEMP_MAX]:
                 errors["base"] = "temp_range_invalid"
-            elif user_input.get(CONF_OPENPLANTBOOK_ENABLED) and not user_input.get(CONF_OPENPLANTBOOK_PID):
-                errors["base"] = "openplantbook_pid_required"
             else:
                 user_input = _cleanup_optional_fields(user_input)
                 await self.async_set_unique_id(plant_name.lower())
@@ -195,8 +193,6 @@ class PlantGuardianOptionsFlow(config_entries.OptionsFlow):
 
             if user_input[CONF_TEMP_MIN] > user_input[CONF_TEMP_MAX]:
                 errors["base"] = "temp_range_invalid"
-            elif user_input.get(CONF_OPENPLANTBOOK_ENABLED) and not user_input.get(CONF_OPENPLANTBOOK_PID):
-                errors["base"] = "openplantbook_pid_required"
             else:
                 user_input = _cleanup_optional_fields(user_input)
                 return self.async_create_entry(title="", data=user_input)
