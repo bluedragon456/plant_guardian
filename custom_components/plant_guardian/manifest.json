@@ -1,7 +1,7 @@
 {
   "domain": "plant_guardian",
   "name": "Plant Guardian",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "documentation": "https://github.com/bluedragon456/plant_guardian",
   "issue_tracker": "https://github.com/bluedragon456/plant_guardian/issues",
   "codeowners": [
