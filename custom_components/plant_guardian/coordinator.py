@@ -58,8 +58,8 @@ class PlantData:
     temperature: float | None
     last_watered: str | None
     last_fertilized: str | None
-    days_since_watered: int | None
-    days_since_fertilized: int | None
+    days_since_watered: int
+    days_since_fertilized: int
     image: str | None
     image_source: str | None
     species: str | None
@@ -178,14 +178,8 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
             status = STATE_HOT
             problem = STATE_HOT
         else:
-            needs_watering = (
-                days_since_watered is not None
-                and days_since_watered >= watering_interval_days
-            )
-            needs_fertilizer = (
-                days_since_fertilized is not None
-                and days_since_fertilized >= fertilizing_interval_days
-            )
+            needs_watering = days_since_watered >= watering_interval_days
+            needs_fertilizer = days_since_fertilized >= fertilizing_interval_days
 
             if needs_watering and needs_fertilizer:
                 status = STATE_NEEDS_CARE
@@ -326,9 +320,9 @@ def _parse_datetime(value: str | None) -> datetime | None:
         return None
 
 
-def _days_since(value: datetime | None) -> int | None:
+def _days_since(value: datetime | None) -> int:
     if value is None:
-        return None
+        return 0
     now = dt_util.now()
     delta: timedelta = now - value
     return max(delta.days, 0)
@@ -338,24 +332,15 @@ def _build_care_summary(
     *,
     plant_name: str,
     status: str,
-    days_since_watered: int | None,
+    days_since_watered: int,
     watering_interval_days: int,
-    days_since_fertilized: int | None,
+    days_since_fertilized: int,
     fertilizing_interval_days: int,
 ) -> str:
-    watered_text = (
-        f"watered {days_since_watered} day(s) ago"
-        if days_since_watered is not None
-        else "watering not logged yet"
-    )
-    fertilized_text = (
-        f"fertilized {days_since_fertilized} day(s) ago"
-        if days_since_fertilized is not None
-        else "fertilizer not logged yet"
-    )
+    watered_text = f"watered {days_since_watered} day(s) ago"
+    fertilized_text = f"fertilized {days_since_fertilized} day(s) ago"
     return (
         f"{plant_name} is {status}. {watered_text} "
         f"(target every {watering_interval_days} day(s)); {fertilized_text} "
         f"(target every {fertilizing_interval_days} day(s))."
     )
-

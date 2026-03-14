@@ -1,0 +1,58 @@
+# Plant Guardian starter dashboard bundle
+#
+# This file combines a report view and a single-plant view in one dashboard.
+# For cleaner imports, prefer the dedicated files:
+# - examples/plant_guardian_report_dashboard.yaml
+# - examples/plant_guardian_single_plant_dashboard.yaml
+
+title: Plant Guardian
+views:
+  - title: Snapshot
+    path: snapshot
+    icon: mdi:view-dashboard-outline
+    type: sections
+    max_columns: 4
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Plant Fleet Snapshot
+            heading_style: title
+            icon: mdi:sprout-outline
+          - type: markdown
+            content: >
+              Swap the example entity IDs for your own plants, then duplicate
+              or trim cards as needed.
+          - type: entity-filter
+            show_empty: false
+            state_filter:
+              - dry
+              - low_light
+              - cold
+              - hot
+              - needs_watering
+              - needs_fertilizer
+              - needs_care
+            entities:
+              - entity: sensor.monstera_deliciosa_status
+                name: Monstera Deliciosa
+            card:
+              type: entities
+              title: Plants needing care
+  - title: Monstera
+    path: monstera
+    icon: mdi:leaf
+    type: sections
+    max_columns: 4
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Monstera Deliciosa
+            heading_style: title
+            icon: mdi:leaf-circle-outline
+          - type: picture-entity
+            entity: sensor.monstera_deliciosa_status
+            name: Monstera Deliciosa
+            show_state: true
+            show_name: true

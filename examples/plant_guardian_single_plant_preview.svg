@@ -1,0 +1,100 @@
+<svg width="1600" height="1180" viewBox="0 0 1600 1180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1600" y2="1180" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6F1E8"/>
+      <stop offset="1" stop-color="#DCE7D7"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="480" y2="240" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1D4F3C"/>
+      <stop offset="1" stop-color="#4F7A56"/>
+    </linearGradient>
+    <linearGradient id="photo" x1="0" y1="0" x2="360" y2="310" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#335D45"/>
+      <stop offset="1" stop-color="#8BAE75"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#163322" flood-opacity="0.12"/>
+    </filter>
+    <style>
+      text { font-family: Georgia, 'Times New Roman', serif; fill: #1C3027; }
+      .ui { font-family: 'Segoe UI', Tahoma, sans-serif; }
+      .muted { fill: #68786F; }
+      .card { fill: rgba(255,255,255,0.82); stroke: rgba(28,48,39,0.08); stroke-width: 1; }
+      .title { font-size: 52px; font-weight: 700; }
+      .label { font-size: 22px; font-weight: 700; }
+      .small { font-size: 18px; }
+      .metric { font-size: 40px; font-weight: 700; }
+    </style>
+  </defs>
+  <rect width="1600" height="1180" fill="url(#bg)"/>
+  <circle cx="1455" cy="130" r="185" fill="#CFE0C4" opacity="0.55"/>
+  <circle cx="120" cy="1040" r="220" fill="#C9D8BB" opacity="0.4"/>
+
+  <text x="78" y="86" class="title">Single-Plant Dashboard</text>
+  <text x="82" y="122" class="ui muted" font-size="22">Focused care cockpit for one plant, built from the example Lovelace YAML</text>
+
+  <rect x="80" y="164" width="470" height="220" rx="30" fill="url(#panel)" filter="url(#shadow)"/>
+  <text x="118" y="225" class="ui" font-size="24" fill="#EAF5E7">Monstera Deliciosa</text>
+  <text x="118" y="288" font-size="56" font-weight="700" fill="#FFFFFF">Healthy</text>
+  <text x="118" y="338" class="ui" font-size="22" fill="#D8E8D7">No active problems. Moisture is comfortable.</text>
+  <rect x="118" y="354" width="148" height="14" rx="7" fill="#D3E5D1" opacity="0.55"/>
+  <rect x="118" y="354" width="96" height="14" rx="7" fill="#8EC68E"/>
+
+  <rect x="580" y="164" width="270" height="220" rx="28" class="card" filter="url(#shadow)"/>
+  <text x="610" y="210" class="label ui">Care Signals</text>
+  <text x="612" y="258" class="ui small">Needs care</text>
+  <text x="748" y="258" class="ui metric">No</text>
+  <text x="612" y="304" class="ui small">Days since watered</text>
+  <text x="782" y="304" class="ui metric">3</text>
+  <text x="612" y="350" class="ui small">Days since fertilized</text>
+  <text x="794" y="350" class="ui metric">21</text>
+
+  <rect x="880" y="164" width="640" height="220" rx="28" class="card" filter="url(#shadow)"/>
+  <text x="912" y="210" class="label ui">Quick Actions</text>
+  <rect x="914" y="242" width="275" height="104" rx="24" fill="#215F47"/>
+  <text x="965" y="302" class="ui" font-size="30" font-weight="700" fill="#FFFFFF">Mark Watered</text>
+  <rect x="1204" y="242" width="275" height="104" rx="24" fill="#5E875C"/>
+  <text x="1246" y="302" class="ui" font-size="30" font-weight="700" fill="#FFFFFF">Mark Fertilized</text>
+
+  <rect x="80" y="426" width="410" height="310" rx="28" fill="url(#photo)" filter="url(#shadow)"/>
+  <path d="M195 681C165 627 169 566 233 523C294 589 294 656 257 704C233 715 211 706 195 681Z" fill="#EAF6DE"/>
+  <path d="M265 682C235 625 238 558 311 507C367 574 368 651 326 703C306 714 284 707 265 682Z" fill="#D9EDC7"/>
+  <path d="M334 680C305 626 309 573 365 538C417 594 420 658 386 703C367 713 350 705 334 680Z" fill="#F1F8E7"/>
+  <text x="114" y="699" class="ui" font-size="22" fill="#F6FAF1">Plant image from status entity picture</text>
+
+  <rect x="520" y="426" width="320" height="310" rx="28" class="card" filter="url(#shadow)"/>
+  <text x="550" y="470" class="label ui">Live Gauges</text>
+  <circle cx="610" cy="566" r="52" stroke="#D2E2EC" stroke-width="18"/>
+  <path d="M610 514 A52 52 0 1 1 567 636" stroke="#5A8FAE" stroke-width="18" stroke-linecap="round"/>
+  <text x="579" y="575" class="ui" font-size="22">61%</text>
+  <text x="568" y="650" class="ui small">Moisture</text>
+  <circle cx="750" cy="566" r="52" stroke="#E5D7A6" stroke-width="18"/>
+  <path d="M750 514 A52 52 0 1 1 710 626" stroke="#D19F2A" stroke-width="18" stroke-linecap="round"/>
+  <text x="722" y="575" class="ui" font-size="22">842</text>
+  <text x="727" y="650" class="ui small">Light</text>
+  <rect x="558" y="676" width="244" height="18" rx="9" fill="#E8D4C9"/>
+  <rect x="558" y="676" width="152" height="18" rx="9" fill="#B66F4C"/>
+  <text x="558" y="722" class="ui small">Temperature 72 F</text>
+
+  <rect x="870" y="426" width="650" height="310" rx="28" class="card" filter="url(#shadow)"/>
+  <text x="902" y="470" class="label ui">Care Details</text>
+  <text x="904" y="530" class="ui small">Species</text>
+  <text x="1188" y="530" class="ui small">Monstera deliciosa</text>
+  <line x1="904" y1="546" x2="1480" y2="546" stroke="#D7DDD5"/>
+  <text x="904" y="592" class="ui small">Last watered</text>
+  <text x="1188" y="592" class="ui small">March 10, 2026</text>
+  <line x1="904" y1="608" x2="1480" y2="608" stroke="#D7DDD5"/>
+  <text x="904" y="654" class="ui small">Last fertilized</text>
+  <text x="1188" y="654" class="ui small">February 21, 2026</text>
+  <line x1="904" y1="670" x2="1480" y2="670" stroke="#D7DDD5"/>
+  <text x="904" y="716" class="ui small">Care summary</text>
+  <text x="1188" y="716" class="ui small">Bright indirect light. Water when top soil dries.</text>
+
+  <rect x="80" y="778" width="1440" height="316" rx="30" class="card" filter="url(#shadow)"/>
+  <text x="114" y="828" class="label ui">Recent Trends</text>
+  <path d="M126 1010C190 988 228 1002 278 962C338 914 382 920 436 876C478 841 530 850 582 824C636 797 684 819 731 788C790 749 835 766 888 734C942 702 983 710 1030 720C1079 730 1124 692 1177 708C1230 724 1268 686 1314 690C1371 695 1411 664 1472 642" stroke="#2D684E" stroke-width="8" stroke-linecap="round"/>
+  <path d="M126 1034C181 1020 236 1048 285 1011C331 977 382 982 435 993C492 1005 542 971 592 952C642 934 687 954 735 940C786 926 833 894 887 905C938 916 984 872 1035 878C1085 884 1122 852 1176 848C1231 844 1272 810 1321 808C1380 805 1424 784 1472 774" stroke="#BC872C" stroke-width="7" stroke-linecap="round" opacity="0.85"/>
+  <path d="M126 1058C188 1046 234 1062 283 1048C337 1033 383 1019 436 1024C486 1029 533 995 588 1004C640 1012 681 978 738 986C791 994 838 960 892 964C944 968 988 942 1036 944C1093 946 1133 926 1176 918C1239 907 1272 884 1316 882C1383 879 1430 854 1472 840" stroke="#6F95AB" stroke-width="7" stroke-linecap="round" opacity="0.9"/>
+  <line x1="126" y1="1072" x2="1478" y2="1072" stroke="#CFD4CD"/>
+  <text x="126" y="1120" class="ui small muted">History graph for status, moisture, light, and temperature across the last 7 days</text>
+</svg>

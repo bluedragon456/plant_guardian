@@ -1,0 +1,150 @@
+# Plant Guardian all-plants report dashboard
+#
+# Before importing:
+# 1. Replace the example entity IDs with your real Plant Guardian entities.
+# 2. Duplicate or remove plant rows to match your collection.
+# 3. Keep the care queue focused by listing each plant's `status` sensor once.
+
+title: Plant Guardian - Report Dashboard
+views:
+  - title: Snapshot
+    path: snapshot
+    icon: mdi:view-dashboard-outline
+    type: sections
+    max_columns: 4
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Plant Fleet Snapshot
+            heading_style: title
+            icon: mdi:sprout-outline
+          - type: markdown
+            content: >
+              A report-friendly overview for all plants. Use this dashboard to
+              spot urgent issues, compare care cadence, and keep the full plant
+              collection visible at a glance.
+      - type: grid
+        cards:
+          - type: heading
+            heading: Attention Queue
+            icon: mdi:alert-decagram-outline
+          - type: entity-filter
+            show_empty: false
+            state_filter:
+              - dry
+              - low_light
+              - cold
+              - hot
+              - needs_watering
+              - needs_fertilizer
+              - needs_care
+            entities:
+              - entity: sensor.monstera_deliciosa_status
+                name: Monstera Deliciosa
+              - entity: sensor.snake_plant_status
+                name: Snake Plant
+              - entity: sensor.fiddle_leaf_fig_status
+                name: Fiddle Leaf Fig
+            card:
+              type: entities
+              title: Plants needing care now
+      - type: grid
+        cards:
+          - type: heading
+            heading: Portfolio Tiles
+            icon: mdi:view-grid-plus-outline
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: tile
+                entity: sensor.monstera_deliciosa_status
+                name: Monstera
+                vertical: true
+              - type: tile
+                entity: sensor.snake_plant_status
+                name: Snake Plant
+                vertical: true
+              - type: tile
+                entity: sensor.fiddle_leaf_fig_status
+                name: Fiddle Leaf Fig
+                vertical: true
+              - type: tile
+                entity: binary_sensor.monstera_deliciosa_needs_care
+                name: Monstera Care
+                color: amber
+              - type: tile
+                entity: binary_sensor.snake_plant_needs_care
+                name: Snake Plant Care
+                color: amber
+              - type: tile
+                entity: binary_sensor.fiddle_leaf_fig_needs_care
+                name: Fiddle Leaf Care
+                color: amber
+      - type: grid
+        cards:
+          - type: heading
+            heading: Care Cadence
+            icon: mdi:calendar-heart
+          - type: entities
+            title: Watering and feeding age
+            show_header_toggle: false
+            entities:
+              - entity: sensor.monstera_deliciosa_days_since_watered
+                name: Monstera watered
+              - entity: sensor.monstera_deliciosa_days_since_fertilized
+                name: Monstera fertilized
+              - entity: sensor.snake_plant_days_since_watered
+                name: Snake Plant watered
+              - entity: sensor.snake_plant_days_since_fertilized
+                name: Snake Plant fertilized
+              - entity: sensor.fiddle_leaf_fig_days_since_watered
+                name: Fiddle Leaf watered
+              - entity: sensor.fiddle_leaf_fig_days_since_fertilized
+                name: Fiddle Leaf fertilized
+      - type: grid
+        cards:
+          - type: heading
+            heading: Log Actions
+            icon: mdi:gesture-tap-button
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: button
+                name: Water Monstera
+                icon: mdi:watering-can
+                tap_action:
+                  action: call-service
+                  service: button.press
+                  target:
+                    entity_id: button.monstera_deliciosa_watered_now
+              - type: button
+                name: Water Snake Plant
+                icon: mdi:watering-can
+                tap_action:
+                  action: call-service
+                  service: button.press
+                  target:
+                    entity_id: button.snake_plant_watered_now
+              - type: button
+                name: Water Fiddle Leaf
+                icon: mdi:watering-can
+                tap_action:
+                  action: call-service
+                  service: button.press
+                  target:
+                    entity_id: button.fiddle_leaf_fig_watered_now
+      - type: grid
+        cards:
+          - type: heading
+            heading: Weekly Status History
+            icon: mdi:chart-timeline-variant
+          - type: history-graph
+            title: Status changes across the collection
+            hours_to_show: 168
+            entities:
+              - entity: sensor.monstera_deliciosa_status
+              - entity: sensor.snake_plant_status
+              - entity: sensor.fiddle_leaf_fig_status

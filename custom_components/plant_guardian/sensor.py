@@ -104,7 +104,7 @@ class PlantGuardianDaysSinceWateredSensor(PlantGuardianEntity, SensorEntity):
         self._attr_unique_id = f"{entry.entry_id}_days_since_watered"
 
     @property
-    def native_value(self) -> int | None:
+    def native_value(self) -> int:
         return self.coordinator.data.days_since_watered
 
 
@@ -119,7 +119,7 @@ class PlantGuardianDaysSinceFertilizedSensor(PlantGuardianEntity, SensorEntity):
         self._attr_unique_id = f"{entry.entry_id}_days_since_fertilized"
 
     @property
-    def native_value(self) -> int | None:
+    def native_value(self) -> int:
         return self.coordinator.data.days_since_fertilized
 
 

@@ -1,0 +1,166 @@
+# Plant Guardian single-plant dashboard
+#
+# Before importing:
+# 1. Replace every `monstera_deliciosa` entity slug with your plant's slug.
+# 2. Adjust gauge thresholds to match this plant's configured care ranges.
+# 3. Remove moisture, light, or temperature cards if this plant does not expose
+#    those Plant Guardian sensor entities.
+
+title: Plant Guardian - Single Plant
+views:
+  - title: Monstera
+    path: monstera
+    icon: mdi:leaf
+    type: sections
+    max_columns: 4
+    sections:
+      - type: grid
+        cards:
+          - type: heading
+            heading: Monstera Deliciosa
+            heading_style: title
+            icon: mdi:leaf-circle-outline
+          - type: picture-entity
+            entity: sensor.monstera_deliciosa_status
+            name: Monstera Deliciosa
+            show_state: true
+            show_name: true
+      - type: grid
+        cards:
+          - type: heading
+            heading: Live Status
+            icon: mdi:heart-pulse
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: tile
+                entity: sensor.monstera_deliciosa_status
+                name: Overall Status
+                color: green
+              - type: tile
+                entity: binary_sensor.monstera_deliciosa_problem
+                name: Problem Active
+                color: red
+              - type: tile
+                entity: binary_sensor.monstera_deliciosa_needs_care
+                name: Needs Care
+                color: amber
+              - type: tile
+                entity: sensor.monstera_deliciosa_days_since_watered
+                name: Days Since Watered
+                color: blue
+      - type: grid
+        cards:
+          - type: heading
+            heading: Sensor Gauges
+            icon: mdi:gauge
+          - type: grid
+            columns: 3
+            square: false
+            cards:
+              - type: gauge
+                entity: sensor.monstera_deliciosa_moisture
+                name: Moisture
+                min: 0
+                max: 100
+                needle: true
+                severity:
+                  red: 0
+                  yellow: 25
+                  green: 40
+              - type: gauge
+                entity: sensor.monstera_deliciosa_light
+                name: Light
+                min: 0
+                max: 2000
+                needle: true
+                severity:
+                  red: 0
+                  yellow: 300
+                  green: 600
+              - type: gauge
+                entity: sensor.monstera_deliciosa_temperature
+                name: Temperature
+                min: 40
+                max: 100
+                needle: true
+                severity:
+                  red: 40
+                  yellow: 60
+                  green: 68
+      - type: grid
+        cards:
+          - type: heading
+            heading: Care Actions
+            icon: mdi:gesture-tap-button
+          - type: horizontal-stack
+            cards:
+              - type: button
+                name: Mark watered
+                icon: mdi:watering-can
+                tap_action:
+                  action: call-service
+                  service: button.press
+                  target:
+                    entity_id: button.monstera_deliciosa_watered_now
+              - type: button
+                name: Mark fertilized
+                icon: mdi:sprout-outline
+                tap_action:
+                  action: call-service
+                  service: button.press
+                  target:
+                    entity_id: button.monstera_deliciosa_fertilized_now
+      - type: grid
+        cards:
+          - type: heading
+            heading: Care Details
+            icon: mdi:text-box-search-outline
+          - type: entities
+            title: Plant profile
+            show_header_toggle: false
+            entities:
+              - entity: sensor.monstera_deliciosa_status
+                name: Status
+              - entity: sensor.monstera_deliciosa_days_since_watered
+                name: Days since watered
+              - entity: sensor.monstera_deliciosa_days_since_fertilized
+                name: Days since fertilized
+              - type: attribute
+                entity: sensor.monstera_deliciosa_status
+                attribute: species
+                name: Species
+              - type: attribute
+                entity: sensor.monstera_deliciosa_status
+                attribute: last_watered
+                name: Last watered
+              - type: attribute
+                entity: sensor.monstera_deliciosa_status
+                attribute: last_fertilized
+                name: Last fertilized
+              - type: attribute
+                entity: sensor.monstera_deliciosa_status
+                attribute: care_summary
+                name: Care summary
+              - type: attribute
+                entity: sensor.monstera_deliciosa_status
+                attribute: image_source
+                name: Image source
+              - type: attribute
+                entity: sensor.monstera_deliciosa_status
+                attribute: care_source
+                name: Care source
+      - type: grid
+        cards:
+          - type: heading
+            heading: Recent Trends
+            icon: mdi:chart-line
+          - type: history-graph
+            title: Past 7 days
+            hours_to_show: 168
+            entities:
+              - entity: sensor.monstera_deliciosa_status
+              - entity: sensor.monstera_deliciosa_moisture
+              - entity: sensor.monstera_deliciosa_light
+              - entity: sensor.monstera_deliciosa_temperature
