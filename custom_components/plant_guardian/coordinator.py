@@ -56,6 +56,12 @@ class PlantData:
     moisture: float | None
     light: float | None
     temperature: float | None
+    moisture_min: float
+    light_min: float
+    temp_min: float
+    temp_max: float
+    watering_interval_days: int
+    fertilizing_interval_days: int
     last_watered: str | None
     last_fertilized: str | None
     days_since_watered: int
@@ -213,6 +219,12 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
             moisture=moisture,
             light=light,
             temperature=temp,
+            moisture_min=moisture_min,
+            light_min=light_min,
+            temp_min=temp_min,
+            temp_max=temp_max,
+            watering_interval_days=watering_interval_days,
+            fertilizing_interval_days=fertilizing_interval_days,
             last_watered=self._last_watered.isoformat() if self._last_watered else None,
             last_fertilized=self._last_fertilized.isoformat() if self._last_fertilized else None,
             days_since_watered=days_since_watered,

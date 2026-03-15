@@ -6,6 +6,31 @@ Plant Guardian is a Home Assistant custom integration for tracking plant health 
 
 ## Dashboard Gallery
 
+### Auto-Generated Dashboard Strategy
+
+Plant Guardian now ships with a first-pass Lovelace strategy that can discover the user's real Plant Guardian entities and build the dashboard from that data.
+
+It creates:
+
+- One snapshot view for the whole collection
+- One detail view per plant
+- Automatic cards for moisture, light, and temperature only when those sensors exist
+- Action buttons and care details from the user's live Home Assistant entities
+
+To use it:
+
+1. Restart Home Assistant after updating Plant Guardian.
+2. Add a Lovelace resource of type `JavaScript module` pointing to `/api/plant_guardian/frontend/plant-guardian-dashboard-strategy.js`.
+3. Create a new dashboard in YAML mode.
+4. Paste this dashboard config:
+
+```yaml
+strategy:
+  name: custom:plant-guardian-auto
+```
+
+This strategy is intentionally conservative for the first version. It focuses on reliable discovery and useful defaults rather than deep customization.
+
 ### Single-Plant Dashboard
 
 ![Single-plant dashboard preview](examples/plant_guardian_single_plant_preview.svg)
@@ -114,6 +139,12 @@ The `Status` sensor exposes these useful attributes:
 - `moisture`
 - `light`
 - `temperature`
+- `moisture_min`
+- `light_min`
+- `temp_min`
+- `temp_max`
+- `watering_interval_days`
+- `fertilizing_interval_days`
 
 These are useful for Lovelace cards, badges, templates, and automations.
 
@@ -197,6 +228,7 @@ If OpenPlantbook is enabled in Plant Guardian but the OpenPlantbook integration 
 - Source sensor states must be numeric for threshold checks to work.
 - The integration watches configured source sensors and refreshes when they change.
 - Watering and fertilizing history begins when you first log those actions through Plant Guardian.
+- The auto-generated strategy currently requires adding a Lovelace resource once before you create the dashboard.
 - There is currently no YAML configuration path in this repo; the supported setup path is the config flow.
 
 ## Good Use Cases

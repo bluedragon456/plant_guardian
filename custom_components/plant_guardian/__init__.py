@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TypeAlias
 
+from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
@@ -12,9 +14,15 @@ from .coordinator import PlantGuardianCoordinator, PlantGuardianRuntimeData
 
 PlantGuardianConfigEntry: TypeAlias = ConfigEntry[PlantGuardianRuntimeData]
 
+_FRONTEND_PATH = Path(__file__).parent / "frontend"
+_STRATEGY_URL = f"/api/{DOMAIN}/frontend"
+
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the integration."""
+    await hass.http.async_register_static_paths(
+        [StaticPathConfig(_STRATEGY_URL, str(_FRONTEND_PATH), cache_headers=False)]
+    )
     return True
 
 
