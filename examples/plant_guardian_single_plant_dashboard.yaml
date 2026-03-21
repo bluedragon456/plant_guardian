@@ -94,6 +94,34 @@ views:
           - type: heading
             heading: Care Actions
             icon: mdi:gesture-tap-button
+          - type: grid
+            columns: 2
+            square: false
+            cards:
+              - type: tile
+                entity: number.monstera_deliciosa_watering_log_days_ago
+                name: Water log days ago
+                icon: mdi:calendar-edit
+              - type: button
+                name: Log watering from selected day
+                icon: mdi:calendar-water
+                tap_action:
+                  action: call-service
+                  service: button.press
+                  target:
+                    entity_id: button.monstera_deliciosa_watered_selected_day
+              - type: tile
+                entity: number.monstera_deliciosa_fertilizing_log_days_ago
+                name: Fertilizer log days ago
+                icon: mdi:calendar-edit
+              - type: button
+                name: Log fertilizing from selected day
+                icon: mdi:calendar-arrow-left
+                tap_action:
+                  action: call-service
+                  service: button.press
+                  target:
+                    entity_id: button.monstera_deliciosa_fertilized_selected_day
           - type: horizontal-stack
             cards:
               - type: button
@@ -151,6 +179,14 @@ views:
                 entity: sensor.monstera_deliciosa_status
                 attribute: care_source
                 name: Care source
+              - type: attribute
+                entity: sensor.monstera_deliciosa_status
+                attribute: watering_log_days_ago
+                name: Water log days ago
+              - type: attribute
+                entity: sensor.monstera_deliciosa_status
+                attribute: fertilizing_log_days_ago
+                name: Fertilizer log days ago
       - type: grid
         cards:
           - type: heading

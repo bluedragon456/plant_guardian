@@ -87,6 +87,10 @@ Every plant creates these entities:
 - `Needs Care` binary sensor
 - `Watered Now` button
 - `Fertilized Now` button
+- `Watering Log Days Ago` number
+- `Fertilizing Log Days Ago` number
+- `Log Watering From Selected Day` button
+- `Log Fertilizing From Selected Day` button
 
 The integration also exposes these services:
 
@@ -156,7 +160,15 @@ These are useful for Lovelace cards, badges, templates, and automations.
 
 ## Backdated Care Logging
 
-If you watered or fertilized a plant earlier and forgot to log it, use the Plant Guardian services from `Developer Tools` -> `Actions`.
+If you watered or fertilized a plant earlier and forgot to log it, you now have two built-in ways to backfill it.
+
+In the plant device page or dashboard:
+
+- Set `Watering Log Days Ago` or `Fertilizing Log Days Ago`
+- Use `1` for yesterday, `2` for two days ago, and so on
+- Press `Log Watering From Selected Day` or `Log Fertilizing From Selected Day`
+
+You can also still use the Plant Guardian services from `Developer Tools` -> `Actions`:
 
 - Choose `plant_guardian.mark_watered` or `plant_guardian.mark_fertilized`
 - Target the Plant Guardian device or one of that plant's Plant Guardian entities

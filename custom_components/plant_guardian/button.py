@@ -18,6 +18,8 @@ async def async_setup_entry(
         [
             PlantGuardianWateredNowButton(entry),
             PlantGuardianFertilizedNowButton(entry),
+            PlantGuardianWateredSelectedDayButton(entry),
+            PlantGuardianFertilizedSelectedDayButton(entry),
         ]
     )
 
@@ -44,3 +46,27 @@ class PlantGuardianFertilizedNowButton(PlantGuardianEntity, ButtonEntity):
 
     async def async_press(self) -> None:
         await self.coordinator.async_mark_fertilized_now()
+
+
+class PlantGuardianWateredSelectedDayButton(PlantGuardianEntity, ButtonEntity):
+    _attr_icon = "mdi:calendar-water"
+
+    def __init__(self, entry: PlantGuardianConfigEntry) -> None:
+        super().__init__(entry)
+        self._attr_name = "Log Watering From Selected Day"
+        self._attr_unique_id = f"{entry.entry_id}_watered_selected_day"
+
+    async def async_press(self) -> None:
+        await self.coordinator.async_mark_watered_selected_day()
+
+
+class PlantGuardianFertilizedSelectedDayButton(PlantGuardianEntity, ButtonEntity):
+    _attr_icon = "mdi:calendar-arrow-left"
+
+    def __init__(self, entry: PlantGuardianConfigEntry) -> None:
+        super().__init__(entry)
+        self._attr_name = "Log Fertilizing From Selected Day"
+        self._attr_unique_id = f"{entry.entry_id}_fertilized_selected_day"
+
+    async def async_press(self) -> None:
+        await self.coordinator.async_mark_fertilized_selected_day()

@@ -8,6 +8,7 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
     Platform.BUTTON,
+    Platform.NUMBER,
 ]
 
 STORAGE_VERSION = 1
@@ -55,6 +56,8 @@ ATTR_TEMP_MIN = "temp_min"
 ATTR_TEMP_MAX = "temp_max"
 ATTR_WATERING_INTERVAL_DAYS = "watering_interval_days"
 ATTR_FERTILIZING_INTERVAL_DAYS = "fertilizing_interval_days"
+ATTR_WATERING_LOG_DAYS_AGO = "watering_log_days_ago"
+ATTR_FERTILIZING_LOG_DAYS_AGO = "fertilizing_log_days_ago"
 
 STATE_HEALTHY = "healthy"
 STATE_DRY = "dry"

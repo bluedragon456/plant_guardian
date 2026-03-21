@@ -48,6 +48,10 @@ const plantFromStatus = (hass, stateObj) => {
     temperature: buildEntityId("sensor", slug, "temperature"),
     wateredNow: buildEntityId("button", slug, "watered_now"),
     fertilizedNow: buildEntityId("button", slug, "fertilized_now"),
+    wateringLogDaysAgo: buildEntityId("number", slug, "watering_log_days_ago"),
+    fertilizingLogDaysAgo: buildEntityId("number", slug, "fertilizing_log_days_ago"),
+    wateredSelectedDay: buildEntityId("button", slug, "watered_selected_day"),
+    fertilizedSelectedDay: buildEntityId("button", slug, "fertilized_selected_day"),
   };
 
   return {
@@ -63,6 +67,10 @@ const plantFromStatus = (hass, stateObj) => {
     hasNeedsCare: Boolean(hass.states[related.needsCare]),
     hasWaterButton: Boolean(hass.states[related.wateredNow]),
     hasFertilizerButton: Boolean(hass.states[related.fertilizedNow]),
+    hasWaterBackfill: Boolean(hass.states[related.wateringLogDaysAgo] && hass.states[related.wateredSelectedDay]),
+    hasFertilizerBackfill: Boolean(
+      hass.states[related.fertilizingLogDaysAgo] && hass.states[related.fertilizedSelectedDay]
+    ),
   };
 };
 
@@ -96,6 +104,13 @@ const buildMetricTile = (entityId, name, color) => ({
   entity: entityId,
   name,
   color,
+});
+
+const buildEntityTile = (entityId, name, icon) => ({
+  type: "tile",
+  entity: entityId,
+  name,
+  icon,
 });
 
 const buildGaugeCard = (entityId, name, min, max, low, good) => ({
@@ -333,6 +348,13 @@ const buildDetailView = (plant) => {
     { type: "attribute", entity: plant.entities.status, attribute: "care_source", name: "Care source" },
     { type: "attribute", entity: plant.entities.status, attribute: "watering_interval_days", name: "Watering interval" },
     { type: "attribute", entity: plant.entities.status, attribute: "fertilizing_interval_days", name: "Fertilizing interval" },
+    { type: "attribute", entity: plant.entities.status, attribute: "watering_log_days_ago", name: "Water log days ago" },
+    {
+      type: "attribute",
+      entity: plant.entities.status,
+      attribute: "fertilizing_log_days_ago",
+      name: "Fertilizer log days ago",
+    },
   ];
 
   if (plant.hasMoisture) {
@@ -425,6 +447,45 @@ const buildDetailView = (plant) => {
             heading: "Care Actions",
             icon: "mdi:gesture-tap-button",
           },
+          ...(plant.hasWaterBackfill || plant.hasFertilizerBackfill
+            ? [
+                {
+                  type: "grid",
+                  columns: 2,
+                  square: false,
+                  cards: [
+                    ...(plant.hasWaterBackfill
+                      ? [
+                          buildEntityTile(
+                            plant.entities.wateringLogDaysAgo,
+                            "Water log days ago",
+                            "mdi:calendar-edit"
+                          ),
+                          buildButtonPressCard(
+                            plant.entities.wateredSelectedDay,
+                            "Log watering from selected day",
+                            "mdi:calendar-water"
+                          ),
+                        ]
+                      : []),
+                    ...(plant.hasFertilizerBackfill
+                      ? [
+                          buildEntityTile(
+                            plant.entities.fertilizingLogDaysAgo,
+                            "Fertilizer log days ago",
+                            "mdi:calendar-edit"
+                          ),
+                          buildButtonPressCard(
+                            plant.entities.fertilizedSelectedDay,
+                            "Log fertilizing from selected day",
+                            "mdi:calendar-arrow-left"
+                          ),
+                        ]
+                      : []),
+                  ],
+                },
+              ]
+            : []),
           actionCards.length
             ? {
                 type: "horizontal-stack",

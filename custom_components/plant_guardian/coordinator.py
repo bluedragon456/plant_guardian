@@ -62,6 +62,8 @@ class PlantData:
     temp_max: float
     watering_interval_days: int
     fertilizing_interval_days: int
+    watering_log_days_ago: int
+    fertilizing_log_days_ago: int
     last_watered: str | None
     last_fertilized: str | None
     days_since_watered: int
@@ -93,11 +95,15 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
         self._unsub: CALLBACK_TYPE | None = None
         self._last_watered: datetime | None = None
         self._last_fertilized: datetime | None = None
+        self._watering_log_days_ago = 0
+        self._fertilizing_log_days_ago = 0
 
     async def async_setup(self) -> None:
         stored = await self._store.async_load() or {}
         self._last_watered = _parse_datetime(stored.get("last_watered"))
         self._last_fertilized = _parse_datetime(stored.get("last_fertilized"))
+        self._watering_log_days_ago = _clamp_days_ago(stored.get("watering_log_days_ago"))
+        self._fertilizing_log_days_ago = _clamp_days_ago(stored.get("fertilizing_log_days_ago"))
 
         watch_entities = [
             self.entry.options.get(CONF_MOISTURE_ENTITY, self.entry.data.get(CONF_MOISTURE_ENTITY)),
@@ -143,11 +149,29 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
         await self._async_save_state()
         await self.async_refresh()
 
+    async def async_mark_watered_selected_day(self) -> None:
+        await self.async_mark_watered(dt_util.now().date() - timedelta(days=self._watering_log_days_ago))
+
+    async def async_mark_fertilized_selected_day(self) -> None:
+        await self.async_mark_fertilized(dt_util.now().date() - timedelta(days=self._fertilizing_log_days_ago))
+
+    async def async_set_watering_log_days_ago(self, days_ago: float) -> None:
+        self._watering_log_days_ago = _clamp_days_ago(days_ago)
+        await self._async_save_state()
+        await self.async_refresh()
+
+    async def async_set_fertilizing_log_days_ago(self, days_ago: float) -> None:
+        self._fertilizing_log_days_ago = _clamp_days_ago(days_ago)
+        await self._async_save_state()
+        await self.async_refresh()
+
     async def _async_save_state(self) -> None:
         await self._store.async_save(
             {
                 "last_watered": self._last_watered.isoformat() if self._last_watered else None,
                 "last_fertilized": self._last_fertilized.isoformat() if self._last_fertilized else None,
+                "watering_log_days_ago": self._watering_log_days_ago,
+                "fertilizing_log_days_ago": self._fertilizing_log_days_ago,
             }
         )
 
@@ -231,6 +255,8 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
             temp_max=temp_max,
             watering_interval_days=watering_interval_days,
             fertilizing_interval_days=fertilizing_interval_days,
+            watering_log_days_ago=self._watering_log_days_ago,
+            fertilizing_log_days_ago=self._fertilizing_log_days_ago,
             last_watered=self._last_watered.isoformat() if self._last_watered else None,
             last_fertilized=self._last_fertilized.isoformat() if self._last_fertilized else None,
             days_since_watered=days_since_watered,
@@ -376,3 +402,10 @@ def _build_care_summary(
         f"(target every {watering_interval_days} day(s)); {fertilized_text} "
         f"(target every {fertilizing_interval_days} day(s))."
     )
+
+
+def _clamp_days_ago(value: Any) -> int:
+    try:
+        return max(0, min(int(float(value)), 365))
+    except (TypeError, ValueError):
+        return 0
