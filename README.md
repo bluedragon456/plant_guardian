@@ -200,6 +200,8 @@ A few customization tips:
 5. Install `Plant Guardian`.
 6. Restart Home Assistant.
 
+The repository also includes `brand/icon.png` so HACS can display the integration icon correctly.
+
 ### Manual
 
 1. Copy [custom_components/plant_guardian](custom_components/plant_guardian) into your Home Assistant `custom_components` directory.
