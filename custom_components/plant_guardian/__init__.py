@@ -3,12 +3,22 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TypeAlias
 
+import voluptuous as vol
+
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import config_validation as cv, device_registry as dr, entity_registry as er
 
-from .const import CONF_PLANT_NAME, DOMAIN, PLATFORMS
+from .const import (
+    CONF_PLANT_NAME,
+    DOMAIN,
+    PLATFORMS,
+    SERVICE_ATTR_OCCURRED_ON,
+    SERVICE_MARK_FERTILIZED,
+    SERVICE_MARK_WATERED,
+)
 from .coordinator import PlantGuardianCoordinator, PlantGuardianRuntimeData
 
 
@@ -23,6 +33,7 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     await hass.http.async_register_static_paths(
         [StaticPathConfig(_STRATEGY_URL, str(_FRONTEND_PATH), cache_headers=False)]
     )
+    _async_register_services(hass)
     return True
 
 
@@ -57,3 +68,89 @@ async def async_unload_entry(hass: HomeAssistant, entry: PlantGuardianConfigEntr
 async def async_update_options(hass: HomeAssistant, entry: PlantGuardianConfigEntry) -> None:
     """Reload when options are updated."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+def _async_register_services(hass: HomeAssistant) -> None:
+    if hass.services.has_service(DOMAIN, SERVICE_MARK_WATERED):
+        return
+
+    service_schema = vol.Schema(
+        {
+            vol.Optional("entity_id"): cv.entity_ids,
+            vol.Optional("device_id"): vol.Any(cv.string, [cv.string]),
+            vol.Optional(SERVICE_ATTR_OCCURRED_ON): cv.date,
+        }
+    )
+
+    async def async_handle_mark_watered(call: ServiceCall) -> None:
+        entries = _resolve_target_entries(hass, call)
+        if not entries:
+            raise HomeAssistantError("Select at least one Plant Guardian device or entity")
+        for entry in entries:
+            try:
+                await entry.runtime_data.coordinator.async_mark_watered(
+                    call.data.get(SERVICE_ATTR_OCCURRED_ON)
+                )
+            except ValueError as err:
+                raise HomeAssistantError(str(err)) from err
+
+    async def async_handle_mark_fertilized(call: ServiceCall) -> None:
+        entries = _resolve_target_entries(hass, call)
+        if not entries:
+            raise HomeAssistantError("Select at least one Plant Guardian device or entity")
+        for entry in entries:
+            try:
+                await entry.runtime_data.coordinator.async_mark_fertilized(
+                    call.data.get(SERVICE_ATTR_OCCURRED_ON)
+                )
+            except ValueError as err:
+                raise HomeAssistantError(str(err)) from err
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_MARK_WATERED,
+        async_handle_mark_watered,
+        schema=service_schema,
+    )
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_MARK_FERTILIZED,
+        async_handle_mark_fertilized,
+        schema=service_schema,
+    )
+
+
+def _resolve_target_entries(
+    hass: HomeAssistant,
+    call: ServiceCall,
+) -> list[PlantGuardianConfigEntry]:
+    entry_ids: set[str] = set()
+    entity_registry = er.async_get(hass)
+    device_registry = dr.async_get(hass)
+
+    entity_ids = call.data.get("entity_id", [])
+    if isinstance(entity_ids, str):
+        entity_ids = [entity_ids]
+
+    for entity_id in entity_ids:
+        entity_entry = entity_registry.async_get(entity_id)
+        if entity_entry and entity_entry.config_entry_id:
+            entry_ids.add(entity_entry.config_entry_id)
+
+    device_ids = call.data.get("device_id", [])
+    if isinstance(device_ids, str):
+        device_ids = [device_ids]
+
+    for device_id in device_ids:
+        device_entry = device_registry.async_get(device_id)
+        if not device_entry:
+            continue
+        for identifier_domain, identifier_value in device_entry.identifiers:
+            if identifier_domain == DOMAIN:
+                entry_ids.add(identifier_value)
+
+    return [
+        entry
+        for entry in hass.config_entries.async_entries(DOMAIN)
+        if entry.entry_id in entry_ids and entry.runtime_data is not None
+    ]

@@ -1,0 +1,27 @@
+mark_watered:
+  target:
+    entity:
+      integration: plant_guardian
+    device:
+      integration: plant_guardian
+  fields:
+    occurred_on:
+      name: Occurred on
+      description: Optional past date when the plant was actually watered. Leave empty to log right now.
+      example: "2026-03-19"
+      selector:
+        date:
+
+mark_fertilized:
+  target:
+    entity:
+      integration: plant_guardian
+    device:
+      integration: plant_guardian
+  fields:
+    occurred_on:
+      name: Occurred on
+      description: Optional past date when the plant was actually fertilized. Leave empty to log right now.
+      example: "2026-03-19"
+      selector:
+        date:

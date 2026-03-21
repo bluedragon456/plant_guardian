@@ -68,6 +68,7 @@ For each plant you add, Plant Guardian currently:
 - Creates a dedicated device in Home Assistant for that plant
 - Tracks plant status from optional moisture, light, and temperature sensor entities
 - Logs watering and fertilizing with built-in button entities
+- Supports backdated watering and fertilizing logs through Home Assistant services
 - Stores the last watered and last fertilized timestamps between restarts
 - Exposes a main status sensor with dashboard-friendly attributes
 - Creates binary sensors for `problem` and `needs care`
@@ -86,6 +87,11 @@ Every plant creates these entities:
 - `Needs Care` binary sensor
 - `Watered Now` button
 - `Fertilized Now` button
+
+The integration also exposes these services:
+
+- `plant_guardian.mark_watered`
+- `plant_guardian.mark_fertilized`
 
 If you attach source sensors, Plant Guardian also creates:
 
@@ -147,6 +153,27 @@ The `Status` sensor exposes these useful attributes:
 - `fertilizing_interval_days`
 
 These are useful for Lovelace cards, badges, templates, and automations.
+
+## Backdated Care Logging
+
+If you watered or fertilized a plant earlier and forgot to log it, use the Plant Guardian services from `Developer Tools` -> `Actions`.
+
+- Choose `plant_guardian.mark_watered` or `plant_guardian.mark_fertilized`
+- Target the Plant Guardian device or one of that plant's Plant Guardian entities
+- Optionally fill in `occurred_on` with the date the care actually happened
+- Leave `occurred_on` empty to log it right now
+
+Example service call:
+
+```yaml
+action: plant_guardian.mark_watered
+target:
+  entity_id: sensor.monstera_deliciosa_status
+data:
+  occurred_on: "2026-03-19"
+```
+
+Backdated logs cannot be set to a future date.
 
 ## Using The Dashboard Examples
 

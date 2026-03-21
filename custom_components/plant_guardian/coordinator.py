@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import logging
 from typing import Any
 
@@ -128,12 +128,18 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
         self.hass.async_create_task(self.async_refresh())
 
     async def async_mark_watered_now(self) -> None:
-        self._last_watered = dt_util.now()
+        await self.async_mark_watered()
+
+    async def async_mark_fertilized_now(self) -> None:
+        await self.async_mark_fertilized()
+
+    async def async_mark_watered(self, occurred_on: date | None = None) -> None:
+        self._last_watered = self._resolve_logged_at(occurred_on)
         await self._async_save_state()
         await self.async_refresh()
 
-    async def async_mark_fertilized_now(self) -> None:
-        self._last_fertilized = dt_util.now()
+    async def async_mark_fertilized(self, occurred_on: date | None = None) -> None:
+        self._last_fertilized = self._resolve_logged_at(occurred_on)
         await self._async_save_state()
         await self.async_refresh()
 
@@ -314,6 +320,20 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
 
     def _conf(self, key: str) -> Any:
         return self.entry.options.get(key, self.entry.data.get(key))
+
+    def _resolve_logged_at(self, occurred_on: date | None) -> datetime:
+        now = dt_util.now()
+        if occurred_on is None:
+            return now
+
+        logged_at = datetime.combine(occurred_on, now.timetz())
+        if logged_at.tzinfo is None:
+            logged_at = logged_at.replace(tzinfo=now.tzinfo)
+
+        if logged_at > now:
+            raise ValueError("Logged care date cannot be in the future")
+
+        return logged_at
 
 
 class PlantGuardianRuntimeData:

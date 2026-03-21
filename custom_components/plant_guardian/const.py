@@ -1,6 +1,9 @@
 from homeassistant.const import Platform
 
 DOMAIN = "plant_guardian"
+SERVICE_MARK_WATERED = "mark_watered"
+SERVICE_MARK_FERTILIZED = "mark_fertilized"
+SERVICE_ATTR_OCCURRED_ON = "occurred_on"
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
