@@ -8,7 +8,7 @@ Plant Guardian is a Home Assistant custom integration for tracking plant health 
 
 ### Auto-Generated Dashboard Strategy
 
-Plant Guardian now ships with a first-pass Lovelace strategy that can discover the user's real Plant Guardian entities and build the dashboard from that data.
+Plant Guardian now ships with a first-pass Lovelace strategy that can discover the user's real Plant Guardian entities and build the dashboard from that data. The hero image uses the status sensor's `image` attribute with a native markdown card fallback, so the dashboard stays valid whether an image exists or not.
 
 It creates:
 

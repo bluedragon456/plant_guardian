@@ -127,6 +127,18 @@ const buildGaugeCard = (entityId, name, min, max, low, good) => ({
   },
 });
 
+const buildHeroImageCard = (plant) => ({
+  type: "markdown",
+  content: `{% set image = state_attr('${plant.entities.status}', 'image') %}
+{% if image %}
+![${plant.name}]({{ image }})
+_Status: **{{ states('${plant.entities.status}') | replace('_', ' ') }}**_
+{% else %}
+### ${plant.name}
+_No plant image available yet. Add an image URL or enable OpenPlantbook image sync._
+{% endif %}`,
+});
+
 const buildOverviewView = (plants) => {
   const carePlants = plants.filter((plant) => CARE_STATES.has(plant.state.state));
   const healthyPlants = plants.length - carePlants.length;
@@ -429,13 +441,7 @@ const buildDetailView = (plant) => {
             heading_style: "title",
             icon: "mdi:leaf-circle-outline",
           },
-          {
-            type: "picture-entity",
-            entity: plant.entities.status,
-            name: plant.name,
-            show_name: true,
-            show_state: true,
-          },
+          buildHeroImageCard(plant),
         ],
       },
       buildDetailMetricsSection(plant),

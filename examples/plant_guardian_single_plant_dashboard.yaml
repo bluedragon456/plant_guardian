@@ -20,11 +20,16 @@ views:
             heading: Monstera Deliciosa
             heading_style: title
             icon: mdi:leaf-circle-outline
-          - type: picture-entity
-            entity: sensor.monstera_deliciosa_status
-            name: Monstera Deliciosa
-            show_state: true
-            show_name: true
+          - type: markdown
+            content: |
+              {% set image = state_attr('sensor.monstera_deliciosa_status', 'image') %}
+              {% if image %}
+              ![Monstera Deliciosa]({{ image }})
+              _Status: **{{ states('sensor.monstera_deliciosa_status') | replace('_', ' ') }}**_
+              {% else %}
+              ### Monstera Deliciosa
+              _No plant image available yet. Add an image URL or enable OpenPlantbook image sync._
+              {% endif %}
       - type: grid
         cards:
           - type: heading
