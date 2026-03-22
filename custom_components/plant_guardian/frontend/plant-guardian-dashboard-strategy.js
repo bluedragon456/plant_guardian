@@ -130,9 +130,10 @@ const buildGaugeCard = (entityId, name, min, max, low, good) => ({
 const buildHeroImageCard = (plant) => ({
   type: "markdown",
   content: `{% set image = state_attr('${plant.entities.status}', 'image') %}
-{% if image %}
-![${plant.name}]({{ image }})
-_Status: **{{ states('${plant.entities.status}') | replace('_', ' ') }}**_
+{% set safe_image = image | replace(' ', '%20') if image else none %}
+{% if safe_image %}
+<img src="{{ safe_image }}" alt="${plant.name}" style="width: 100%; border-radius: 16px; display: block; object-fit: cover;" />
+<p><strong>Status:</strong> {{ states('${plant.entities.status}') | replace('_', ' ') }}</p>
 {% else %}
 ### ${plant.name}
 _No plant image available yet. Add an image URL or enable OpenPlantbook image sync._
