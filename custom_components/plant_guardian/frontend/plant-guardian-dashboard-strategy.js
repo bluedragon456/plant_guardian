@@ -9,6 +9,7 @@ const CARE_STATES = new Set([
 ]);
 
 const STATUS_SUFFIX = "_status";
+const UNAVAILABLE_STATES = new Set(["unavailable", "unknown"]);
 
 const toTitleCase = (value) =>
   value
@@ -27,6 +28,15 @@ const stripStatusSuffix = (value, fallback) => {
 
 const buildEntityId = (domain, slug, suffix) => `${domain}.${slug}_${suffix}`;
 
+const findImageEntityId = (hass, slug) => {
+  const prefix = `image.${slug}_image`;
+
+  return Object.keys(hass.states)
+    .filter((entityId) => entityId === prefix || entityId.startsWith(`${prefix}_`))
+    .filter((entityId) => !UNAVAILABLE_STATES.has(hass.states[entityId]?.state))
+    .sort((left, right) => left.length - right.length || left.localeCompare(right))[0];
+};
+
 const plantFromStatus = (hass, stateObj) => {
   const match = stateObj.entity_id.match(/^sensor\.(.+)_status$/);
   if (!match) {
@@ -36,10 +46,11 @@ const plantFromStatus = (hass, stateObj) => {
   const slug = match[1];
   const fallbackName = slugToName(slug);
   const name = stripStatusSuffix(stateObj.attributes.friendly_name, fallbackName);
+  const imageEntityId = findImageEntityId(hass, slug);
 
   const related = {
     status: stateObj.entity_id,
-    image: buildEntityId("image", slug, "image"),
+    image: imageEntityId ?? buildEntityId("image", slug, "image"),
     problem: buildEntityId("binary_sensor", slug, "problem"),
     needsCare: buildEntityId("binary_sensor", slug, "needs_care"),
     daysSinceWatered: buildEntityId("sensor", slug, "days_since_watered"),
@@ -62,7 +73,7 @@ const plantFromStatus = (hass, stateObj) => {
     state: stateObj,
     entities: related,
     hasImage: Boolean(stateObj.attributes.image),
-    hasImageEntity: Boolean(hass.states[related.image]),
+    hasImageEntity: Boolean(imageEntityId),
     hasMoisture: Boolean(hass.states[related.moisture]),
     hasLight: Boolean(hass.states[related.light]),
     hasTemperature: Boolean(hass.states[related.temperature]),

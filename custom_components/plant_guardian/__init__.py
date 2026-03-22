@@ -53,6 +53,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PlantGuardianConfigEntry
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    _async_cleanup_stale_image_entities(hass, entry)
     entry.async_on_unload(entry.add_update_listener(async_update_options))
     return True
 
@@ -68,6 +69,21 @@ async def async_unload_entry(hass: HomeAssistant, entry: PlantGuardianConfigEntr
 async def async_update_options(hass: HomeAssistant, entry: PlantGuardianConfigEntry) -> None:
     """Reload when options are updated."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+def _async_cleanup_stale_image_entities(hass: HomeAssistant, entry: PlantGuardianConfigEntry) -> None:
+    entity_registry = er.async_get(hass)
+    expected_unique_id = f"{entry.entry_id}_image"
+
+    for entity_entry in er.async_entries_for_config_entry(entity_registry, entry.entry_id):
+        if entity_entry.domain != "image":
+            continue
+
+        is_expected = entity_entry.unique_id == expected_unique_id
+        is_provided = hass.states.get(entity_entry.entity_id) is not None
+
+        if not is_expected or not is_provided:
+            entity_registry.async_remove(entity_entry.entity_id)
 
 
 def _async_register_services(hass: HomeAssistant) -> None:

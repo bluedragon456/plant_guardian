@@ -24,8 +24,14 @@ class PlantGuardianImage(PlantGuardianEntity, ImageEntity):
         super().__init__(entry)
         self._attr_name = "Image"
         self._attr_unique_id = f"{entry.entry_id}_image"
-        self._image_last_updated: datetime | None = None
-        self._last_image_url: str | None = None
+        self._last_image_url: str | None = self.coordinator.data.image
+        self._image_last_updated: datetime | None = (
+            dt_util.utcnow() if self._last_image_url else None
+        )
+
+    @property
+    def available(self) -> bool:
+        return bool(self.coordinator.data.image)
 
     @property
     def image_url(self) -> str | None:
