@@ -51,14 +51,8 @@ views:
             heading: Monstera Deliciosa
             heading_style: title
             icon: mdi:leaf-circle-outline
-          - type: markdown
-            content: |
-              {% set image = state_attr('sensor.monstera_deliciosa_status', 'image') %}
-              {% set safe_image = image | replace(' ', '%20') if image else none %}
-              {% if safe_image %}
-              <img src="{{ safe_image }}" alt="Monstera Deliciosa" style="width: 100%; border-radius: 16px; display: block; object-fit: cover;" />
-              <p><strong>Status:</strong> {{ states('sensor.monstera_deliciosa_status') | replace('_', ' ') }}</p>
-              {% else %}
-              ### Monstera Deliciosa
-              _No plant image available yet. Add an image URL or enable OpenPlantbook image sync._
-              {% endif %}
+          - type: picture-entity
+            entity: image.monstera_deliciosa_image
+            name: Monstera Deliciosa
+            show_name: true
+            show_state: false

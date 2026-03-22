@@ -39,6 +39,7 @@ const plantFromStatus = (hass, stateObj) => {
 
   const related = {
     status: stateObj.entity_id,
+    image: buildEntityId("image", slug, "image"),
     problem: buildEntityId("binary_sensor", slug, "problem"),
     needsCare: buildEntityId("binary_sensor", slug, "needs_care"),
     daysSinceWatered: buildEntityId("sensor", slug, "days_since_watered"),
@@ -60,6 +61,8 @@ const plantFromStatus = (hass, stateObj) => {
     path: slug,
     state: stateObj,
     entities: related,
+    hasImage: Boolean(stateObj.attributes.image),
+    hasImageEntity: Boolean(hass.states[related.image]),
     hasMoisture: Boolean(hass.states[related.moisture]),
     hasLight: Boolean(hass.states[related.light]),
     hasTemperature: Boolean(hass.states[related.temperature]),
@@ -127,18 +130,22 @@ const buildGaugeCard = (entityId, name, min, max, low, good) => ({
   },
 });
 
-const buildHeroImageCard = (plant) => ({
-  type: "markdown",
-  content: `{% set image = state_attr('${plant.entities.status}', 'image') %}
-{% set safe_image = image | replace(' ', '%20') if image else none %}
-{% if safe_image %}
-<img src="{{ safe_image }}" alt="${plant.name}" style="width: 100%; border-radius: 16px; display: block; object-fit: cover;" />
-<p><strong>Status:</strong> {{ states('${plant.entities.status}') | replace('_', ' ') }}</p>
-{% else %}
-### ${plant.name}
-_No plant image available yet. Add an image URL or enable OpenPlantbook image sync._
-{% endif %}`,
-});
+const buildHeroImageCard = (plant) => {
+  if (plant.hasImage && plant.hasImageEntity) {
+    return {
+      type: "picture-entity",
+      entity: plant.entities.image,
+      name: plant.name,
+      show_name: true,
+      show_state: false,
+    };
+  }
+
+  return {
+    type: "markdown",
+    content: `### ${plant.name}\n_No plant image available yet. Add an image URL or enable OpenPlantbook image sync._`,
+  };
+};
 
 const buildOverviewView = (plants) => {
   const carePlants = plants.filter((plant) => CARE_STATES.has(plant.state.state));
