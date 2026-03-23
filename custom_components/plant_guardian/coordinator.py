@@ -4,9 +4,10 @@ from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 import logging
 from typing import Any
+from urllib.parse import quote, urlsplit, urlunsplit
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfTemperature
 from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.storage import Store
@@ -60,6 +61,10 @@ class PlantData:
     light_min: float
     temp_min: float
     temp_max: float
+    temp_min_source: float
+    temp_max_source: float
+    temperature_unit: str
+    temperature_source_unit: str
     watering_interval_days: int
     fertilizing_interval_days: int
     watering_log_days_ago: int
@@ -184,11 +189,21 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
 
         moisture = self._safe_float(moisture_entity)
         light = self._safe_float(light_entity)
-        temp = self._safe_float(temp_entity)
+        temp = self._safe_temperature(temp_entity)
 
-        moisture_min, light_min, temp_min, temp_max, watering_interval_days, fertilizing_interval_days, care_source = (
-            self._resolve_care_config(openplantbook)
-        )
+        (
+            moisture_min,
+            light_min,
+            temp_min,
+            temp_max,
+            temp_min_source,
+            temp_max_source,
+            temperature_unit,
+            temperature_source_unit,
+            watering_interval_days,
+            fertilizing_interval_days,
+            care_source,
+        ) = self._resolve_care_config(openplantbook)
 
         days_since_watered = _days_since(self._last_watered)
         days_since_fertilized = _days_since(self._last_fertilized)
@@ -253,6 +268,10 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
             light_min=light_min,
             temp_min=temp_min,
             temp_max=temp_max,
+            temp_min_source=temp_min_source,
+            temp_max_source=temp_max_source,
+            temperature_unit=temperature_unit,
+            temperature_source_unit=temperature_source_unit,
             watering_interval_days=watering_interval_days,
             fertilizing_interval_days=fertilizing_interval_days,
             watering_log_days_ago=self._watering_log_days_ago,
@@ -273,20 +292,24 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
         sync_image = bool(self._conf(CONF_OPENPLANTBOOK_SYNC_IMAGE))
 
         if image_url:
-            return image_url, "user"
+            return _normalize_image_url(image_url), "user"
 
         if sync_image and openplantbook and openplantbook.image_url:
-            return openplantbook.image_url, "openplantbook"
+            return _normalize_image_url(openplantbook.image_url), "openplantbook"
 
         return None, None
 
-    def _resolve_care_config(self, openplantbook) -> tuple[float, float, float, float, int, int, str]:
+    def _resolve_care_config(
+        self, openplantbook
+    ) -> tuple[float, float, float, float, float, float, str, str, int, int, str]:
         sync_care = bool(self._conf(CONF_OPENPLANTBOOK_SYNC_CARE))
+        display_unit = self.hass.config.units.temperature_unit
 
         moisture_min = float(self._conf(CONF_MOISTURE_MIN))
         light_min = float(self._conf(CONF_LIGHT_MIN))
-        temp_min = float(self._conf(CONF_TEMP_MIN))
-        temp_max = float(self._conf(CONF_TEMP_MAX))
+        temp_min_source = float(self._conf(CONF_TEMP_MIN))
+        temp_max_source = float(self._conf(CONF_TEMP_MAX))
+        temperature_source_unit = display_unit
         watering_interval_days = int(self._conf(CONF_WATERING_INTERVAL_DAYS))
         fertilizing_interval_days = int(self._conf(CONF_FERTILIZING_INTERVAL_DAYS))
 
@@ -305,8 +328,9 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
         if sync_care and has_openplantbook_care:
             moisture_min = float(openplantbook.moisture_min or moisture_min)
             light_min = float(openplantbook.light_min or light_min)
-            temp_min = float(openplantbook.temp_min or temp_min)
-            temp_max = float(openplantbook.temp_max or temp_max)
+            temp_min_source = float(openplantbook.temp_min or temp_min_source)
+            temp_max_source = float(openplantbook.temp_max or temp_max_source)
+            temperature_source_unit = UnitOfTemperature.CELSIUS
             watering_interval_days = int(openplantbook.watering_interval_days or watering_interval_days)
             fertilizing_interval_days = int(
                 openplantbook.fertilizing_interval_days or fertilizing_interval_days
@@ -314,18 +338,28 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
             return (
                 moisture_min,
                 light_min,
-                temp_min,
-                temp_max,
+                _convert_temperature(temp_min_source, temperature_source_unit, display_unit),
+                _convert_temperature(temp_max_source, temperature_source_unit, display_unit),
+                temp_min_source,
+                temp_max_source,
+                display_unit,
+                temperature_source_unit,
                 watering_interval_days,
                 fertilizing_interval_days,
                 "openplantbook",
             )
 
+        temp_min = _convert_temperature(temp_min_source, temperature_source_unit, display_unit)
+        temp_max = _convert_temperature(temp_max_source, temperature_source_unit, display_unit)
         return (
             moisture_min,
             light_min,
             temp_min,
             temp_max,
+            temp_min_source,
+            temp_max_source,
+            display_unit,
+            temperature_source_unit,
             watering_interval_days,
             fertilizing_interval_days,
             "manual",
@@ -343,6 +377,27 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
             return float(state.state)
         except (TypeError, ValueError):
             return None
+
+    def _safe_temperature(self, entity_id: str | None) -> float | None:
+        if not entity_id:
+            return None
+
+        state = self.hass.states.get(entity_id)
+        if state is None or state.state in (STATE_UNKNOWN, STATE_UNAVAILABLE):
+            return None
+
+        try:
+            value = float(state.state)
+        except (TypeError, ValueError):
+            return None
+
+        source_unit = _normalize_temperature_unit(state.attributes.get("unit_of_measurement"))
+        target_unit = self.hass.config.units.temperature_unit
+
+        if source_unit is None:
+            return value
+
+        return _convert_temperature(value, source_unit, target_unit)
 
     def _conf(self, key: str) -> Any:
         return self.entry.options.get(key, self.entry.data.get(key))
@@ -409,3 +464,36 @@ def _clamp_days_ago(value: Any) -> int:
         return max(0, min(int(float(value)), 365))
     except (TypeError, ValueError):
         return 0
+
+
+def _normalize_temperature_unit(value: Any) -> str | None:
+    if value in (UnitOfTemperature.CELSIUS, "C", "c"):
+        return UnitOfTemperature.CELSIUS
+    if value in (UnitOfTemperature.FAHRENHEIT, "F", "f"):
+        return UnitOfTemperature.FAHRENHEIT
+    return None
+
+
+def _convert_temperature(value: float, from_unit: str, to_unit: str) -> float:
+    normalized_from = _normalize_temperature_unit(from_unit)
+    normalized_to = _normalize_temperature_unit(to_unit)
+
+    if normalized_from is None or normalized_to is None or normalized_from == normalized_to:
+        return value
+
+    if normalized_from == UnitOfTemperature.CELSIUS and normalized_to == UnitOfTemperature.FAHRENHEIT:
+        return (value * 9 / 5) + 32
+
+    if normalized_from == UnitOfTemperature.FAHRENHEIT and normalized_to == UnitOfTemperature.CELSIUS:
+        return (value - 32) * 5 / 9
+
+    return value
+
+
+def _normalize_image_url(value: str | None) -> str | None:
+    if not value:
+        return None
+
+    parts = urlsplit(value)
+    path = quote(parts.path, safe="/:@%._-~")
+    return urlunsplit((parts.scheme, parts.netloc, path, parts.query, parts.fragment))

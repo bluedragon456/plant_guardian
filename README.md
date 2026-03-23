@@ -8,7 +8,7 @@ Plant Guardian is a Home Assistant custom integration for tracking plant health 
 
 ### Auto-Generated Dashboard Strategy
 
-Plant Guardian now ships with a first-pass Lovelace strategy that can discover the user's real Plant Guardian entities and build the dashboard from that data. The hero image now uses a dedicated native image entity for each plant, so the strategy can safely render it with picture-entity when an image exists and fall back to text when it does not.
+Plant Guardian now ships with a first-pass Lovelace strategy that can discover the user's real Plant Guardian entities and build the dashboard from that data. The hero image uses a dedicated native `image` entity for each plant, sourced from the same resolved image URL that also feeds the status sensor thumbnail, so the strategy can safely render it with `picture-entity` when an image exists and fall back to text when it does not.
 
 It creates:
 
@@ -153,6 +153,10 @@ The `Status` sensor exposes these useful attributes:
 - `light_min`
 - `temp_min`
 - `temp_max`
+- `temp_min_source`
+- `temp_max_source`
+- `temperature_unit`
+- `temperature_source_unit`
 - `watering_interval_days`
 - `fertilizing_interval_days`
 
@@ -259,6 +263,7 @@ Current behavior:
 - If enabled, Plant Guardian can resolve plant details using the provided PID, species, or plant name
 - It can use an OpenPlantbook image when you have not set a manual image URL
 - It can use OpenPlantbook care thresholds when care values are returned
+- OpenPlantbook temperature thresholds are treated as Celsius source data and converted into your Home Assistant temperature unit before status comparisons and dashboard display
 - Results are cached for 24 hours per plant configuration
 
 If OpenPlantbook is enabled in Plant Guardian but the OpenPlantbook integration is not installed in Home Assistant, Plant Guardian still works, but live lookup data may be unavailable.

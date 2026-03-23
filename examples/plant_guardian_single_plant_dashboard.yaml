@@ -21,9 +21,11 @@ views:
             heading: Monstera Deliciosa
             heading_style: title
             icon: mdi:leaf-circle-outline
-          - type: picture
-            image: /local/images/plants/monstera%20deliciosa.jpg
-            alt: Monstera Deliciosa
+          - type: picture-entity
+            entity: image.monstera_deliciosa_image
+            name: Monstera Deliciosa
+            show_name: true
+            show_state: false
             tap_action:
               action: none
             hold_action:
@@ -184,12 +186,28 @@ views:
                 name: Care source
               - type: attribute
                 entity: sensor.monstera_deliciosa_status
+                attribute: temperature_unit
+                name: Temperature unit
+              - type: attribute
+                entity: sensor.monstera_deliciosa_status
                 attribute: watering_log_days_ago
                 name: Water log days ago
               - type: attribute
                 entity: sensor.monstera_deliciosa_status
                 attribute: fertilizing_log_days_ago
                 name: Fertilizer log days ago
+              - type: attribute
+                entity: sensor.monstera_deliciosa_status
+                attribute: temp_min_source
+                name: Source minimum temperature
+              - type: attribute
+                entity: sensor.monstera_deliciosa_status
+                attribute: temp_max_source
+                name: Source maximum temperature
+              - type: attribute
+                entity: sensor.monstera_deliciosa_status
+                attribute: temperature_source_unit
+                name: Source temperature unit
       - type: grid
         cards:
           - type: heading
