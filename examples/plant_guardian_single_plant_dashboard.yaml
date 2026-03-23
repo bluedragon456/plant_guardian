@@ -21,11 +21,13 @@ views:
             heading: Monstera Deliciosa
             heading_style: title
             icon: mdi:leaf-circle-outline
-          - type: picture-entity
-            entity: image.monstera_deliciosa_image
-            name: Monstera Deliciosa
-            show_name: true
-            show_state: false
+          - type: picture
+            image: /local/images/plants/monstera%20deliciosa.jpg
+            alt: Monstera Deliciosa
+            tap_action:
+              action: none
+            hold_action:
+              action: none
       - type: grid
         cards:
           - type: heading

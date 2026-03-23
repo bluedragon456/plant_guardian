@@ -9,7 +9,6 @@ const CARE_STATES = new Set([
 ]);
 
 const STATUS_SUFFIX = "_status";
-const UNAVAILABLE_STATES = new Set(["unavailable", "unknown"]);
 
 const toTitleCase = (value) =>
   value
@@ -28,13 +27,16 @@ const stripStatusSuffix = (value, fallback) => {
 
 const buildEntityId = (domain, slug, suffix) => `${domain}.${slug}_${suffix}`;
 
-const findImageEntityId = (hass, slug) => {
-  const prefix = `image.${slug}_image`;
+const normalizeImageUrl = (value) => {
+  if (!value) {
+    return undefined;
+  }
 
-  return Object.keys(hass.states)
-    .filter((entityId) => entityId === prefix || entityId.startsWith(`${prefix}_`))
-    .filter((entityId) => !UNAVAILABLE_STATES.has(hass.states[entityId]?.state))
-    .sort((left, right) => left.length - right.length || left.localeCompare(right))[0];
+  try {
+    return encodeURI(value);
+  } catch {
+    return value.replace(/ /g, "%20");
+  }
 };
 
 const plantFromStatus = (hass, stateObj) => {
@@ -46,11 +48,12 @@ const plantFromStatus = (hass, stateObj) => {
   const slug = match[1];
   const fallbackName = slugToName(slug);
   const name = stripStatusSuffix(stateObj.attributes.friendly_name, fallbackName);
-  const imageEntityId = findImageEntityId(hass, slug);
+  const imageUrl = normalizeImageUrl(
+    stateObj.attributes.image || stateObj.attributes.entity_picture
+  );
 
   const related = {
     status: stateObj.entity_id,
-    image: imageEntityId ?? buildEntityId("image", slug, "image"),
     problem: buildEntityId("binary_sensor", slug, "problem"),
     needsCare: buildEntityId("binary_sensor", slug, "needs_care"),
     daysSinceWatered: buildEntityId("sensor", slug, "days_since_watered"),
@@ -71,9 +74,9 @@ const plantFromStatus = (hass, stateObj) => {
     name,
     path: slug,
     state: stateObj,
+    imageUrl,
     entities: related,
-    hasImage: Boolean(stateObj.attributes.image),
-    hasImageEntity: Boolean(imageEntityId),
+    hasImage: Boolean(imageUrl),
     hasMoisture: Boolean(hass.states[related.moisture]),
     hasLight: Boolean(hass.states[related.light]),
     hasTemperature: Boolean(hass.states[related.temperature]),
@@ -142,13 +145,13 @@ const buildGaugeCard = (entityId, name, min, max, low, good) => ({
 });
 
 const buildHeroImageCard = (plant) => {
-  if (plant.hasImage && plant.hasImageEntity) {
+  if (plant.hasImage) {
     return {
-      type: "picture-entity",
-      entity: plant.entities.image,
-      name: plant.name,
-      show_name: true,
-      show_state: false,
+      type: "picture",
+      image: plant.imageUrl,
+      alt: plant.name,
+      tap_action: { action: "none" },
+      hold_action: { action: "none" },
     };
   }
 
