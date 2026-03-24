@@ -6,8 +6,10 @@ from homeassistant.components.image import ImageEntity
 from homeassistant.core import callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
+from homeassistant.util import slugify
 
 from .__init__ import PlantGuardianConfigEntry
+from .const import CONF_PLANT_NAME
 from .entity import PlantGuardianEntity
 
 
@@ -24,6 +26,8 @@ class PlantGuardianImage(PlantGuardianEntity, ImageEntity):
         super().__init__(entry)
         self._attr_name = "Image"
         self._attr_unique_id = f"{entry.entry_id}_image"
+        plant_slug = slugify(entry.title or entry.data.get(CONF_PLANT_NAME, "plant"))
+        self._attr_suggested_object_id = f"{plant_slug}_image"
         self._last_image_url: str | None = self.coordinator.data.image
         self._image_last_updated: datetime | None = (
             dt_util.utcnow() if self._last_image_url else None

@@ -17,6 +17,8 @@ const toTitleCase = (value) =>
 
 const slugToName = (slug) => toTitleCase(slug);
 
+const normalizeLabel = (value) => (value || "").toString().trim().toLowerCase();
+
 const stripStatusSuffix = (value, fallback) => {
   if (!value) {
     return fallback;
@@ -41,7 +43,7 @@ const normalizeImageUrl = (value) => {
   }
 };
 
-const findImageEntityId = (hass, slug) => {
+const findImageEntityId = (hass, slug, plantName) => {
   const exactEntityId = buildEntityId("image", slug, "image");
   const exact = hass.states[exactEntityId];
 
@@ -53,12 +55,28 @@ const findImageEntityId = (hass, slug) => {
     .filter((entityId) => entityId.startsWith(`image.${slug}_image`))
     .sort((left, right) => left.length - right.length);
 
-  return (
-    candidates.find((entityId) => {
-      const stateObj = hass.states[entityId];
-      return stateObj && !IMAGE_UNAVAILABLE_STATES.has(stateObj.state);
-    }) || undefined
-  );
+  const slugCandidate = candidates.find((entityId) => {
+    const stateObj = hass.states[entityId];
+    return stateObj && !IMAGE_UNAVAILABLE_STATES.has(stateObj.state);
+  });
+
+  if (slugCandidate) {
+    return slugCandidate;
+  }
+
+  const normalizedPlantImageLabel = normalizeLabel(`${plantName} image`);
+
+  return Object.entries(hass.states)
+    .filter(([entityId, stateObj]) => entityId.startsWith("image.") && stateObj)
+    .sort(([left], [right]) => left.length - right.length)
+    .find(([, stateObj]) => {
+      if (IMAGE_UNAVAILABLE_STATES.has(stateObj.state)) {
+        return false;
+      }
+
+      const friendlyName = normalizeLabel(stateObj.attributes.friendly_name);
+      return friendlyName === normalizedPlantImageLabel;
+    })?.[0];
 };
 
 const plantFromStatus = (hass, stateObj) => {
@@ -70,7 +88,7 @@ const plantFromStatus = (hass, stateObj) => {
   const slug = match[1];
   const fallbackName = slugToName(slug);
   const name = stripStatusSuffix(stateObj.attributes.friendly_name, fallbackName);
-  const imageEntity = findImageEntityId(hass, slug);
+  const imageEntity = findImageEntityId(hass, slug, name);
   const imageUrl = normalizeImageUrl(
     stateObj.attributes.image || stateObj.attributes.entity_picture
   );

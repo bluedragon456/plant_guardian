@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv, device_registry as dr, entity_registry as er
+from homeassistant.util import slugify
 
 from .const import (
     CONF_PLANT_NAME,
@@ -39,6 +40,8 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 
 async def async_setup_entry(hass: HomeAssistant, entry: PlantGuardianConfigEntry) -> bool:
     """Set up Plant Guardian from a config entry."""
+    _async_cleanup_stale_image_entities(hass, entry, remove_missing_states=False)
+
     coordinator = PlantGuardianCoordinator(hass, entry)
     await coordinator.async_setup()
     entry.runtime_data = PlantGuardianRuntimeData(coordinator)
@@ -53,7 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PlantGuardianConfigEntry
     )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-    _async_cleanup_stale_image_entities(hass, entry)
+    _async_cleanup_stale_image_entities(hass, entry, remove_missing_states=True)
     entry.async_on_unload(entry.add_update_listener(async_update_options))
     return True
 
@@ -71,18 +74,26 @@ async def async_update_options(hass: HomeAssistant, entry: PlantGuardianConfigEn
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-def _async_cleanup_stale_image_entities(hass: HomeAssistant, entry: PlantGuardianConfigEntry) -> None:
+def _async_cleanup_stale_image_entities(
+    hass: HomeAssistant,
+    entry: PlantGuardianConfigEntry,
+    *,
+    remove_missing_states: bool,
+) -> None:
     entity_registry = er.async_get(hass)
     expected_unique_id = f"{entry.entry_id}_image"
+    expected_slug = slugify(entry.title or entry.data.get(CONF_PLANT_NAME, "plant"))
+    expected_prefix = f"image.{expected_slug}_image"
 
     for entity_entry in er.async_entries_for_config_entry(entity_registry, entry.entry_id):
         if entity_entry.domain != "image":
             continue
 
         is_expected = entity_entry.unique_id == expected_unique_id
+        has_expected_entity_id = entity_entry.entity_id.startswith(expected_prefix)
         is_provided = hass.states.get(entity_entry.entity_id) is not None
 
-        if not is_expected or not is_provided:
+        if not is_expected or not has_expected_entity_id or (remove_missing_states and not is_provided):
             entity_registry.async_remove(entity_entry.entity_id)
 
 
