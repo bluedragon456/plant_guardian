@@ -199,6 +199,16 @@ const buildHeroImageCard = (plant) => {
     };
   }
 
+  if (plant.imageUrl) {
+    return {
+      type: "picture",
+      image: plant.imageUrl,
+      alt: plant.name,
+      tap_action: { action: "none" },
+      hold_action: { action: "none" },
+    };
+  }
+
   return {
     type: "markdown",
     content: `### ${plant.name}\n_No plant image available yet. Add an image URL or enable OpenPlantbook image sync._`,

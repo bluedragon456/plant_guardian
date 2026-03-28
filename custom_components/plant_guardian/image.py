@@ -4,7 +4,6 @@ from datetime import datetime
 
 from homeassistant.components.image import ImageEntity
 from homeassistant.core import callback
-from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
@@ -40,21 +39,7 @@ class PlantGuardianImage(PlantGuardianEntity, ImageEntity):
 
     @property
     def image_url(self) -> str | None:
-        image_url = self.coordinator.data.image
-        if not image_url:
-            return None
-
-        if image_url.startswith(("http://", "https://")):
-            return image_url
-
-        if image_url.startswith("/"):
-            try:
-                base_url = get_url(self.hass)
-            except NoURLAvailableError:
-                return image_url
-            return f"{base_url}{image_url}"
-
-        return image_url
+        return self.coordinator.data.image
 
     @property
     def image_last_updated(self) -> datetime | None:
