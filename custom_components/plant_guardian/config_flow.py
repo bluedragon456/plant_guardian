@@ -9,6 +9,7 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
+    CONF_CACHE_IMAGES_LOCALLY,
     CONF_FERTILIZING_INTERVAL_DAYS,
     CONF_IMAGE_URL,
     CONF_LIGHT_ENTITY,
@@ -64,6 +65,7 @@ def _normalize_defaults(defaults: dict[str, Any] | None = None) -> dict[str, Any
         CONF_PLANT_NAME: str(data.get(CONF_PLANT_NAME) or ""),
         CONF_SPECIES: str(data.get(CONF_SPECIES) or ""),
         CONF_IMAGE_URL: str(data.get(CONF_IMAGE_URL) or ""),
+        CONF_CACHE_IMAGES_LOCALLY: bool(data.get(CONF_CACHE_IMAGES_LOCALLY, False)),
         CONF_OPENPLANTBOOK_ENABLED: bool(data.get(CONF_OPENPLANTBOOK_ENABLED, False)),
         CONF_OPENPLANTBOOK_PID: str(data.get(CONF_OPENPLANTBOOK_PID) or ""),
         CONF_OPENPLANTBOOK_SYNC_IMAGE: bool(data.get(CONF_OPENPLANTBOOK_SYNC_IMAGE, True)),
@@ -105,6 +107,7 @@ def _build_schema(defaults: dict[str, Any] | None = None, *, include_name: bool 
 
     schema[vol.Optional(CONF_SPECIES, default=defaults[CONF_SPECIES])] = selector.TextSelector()
     schema[vol.Optional(CONF_IMAGE_URL, default=defaults[CONF_IMAGE_URL])] = selector.TextSelector()
+    schema[vol.Optional(CONF_CACHE_IMAGES_LOCALLY, default=defaults[CONF_CACHE_IMAGES_LOCALLY])] = selector.BooleanSelector()
     schema[vol.Optional(CONF_OPENPLANTBOOK_ENABLED, default=defaults[CONF_OPENPLANTBOOK_ENABLED])] = selector.BooleanSelector()
     schema[vol.Optional(CONF_OPENPLANTBOOK_PID, default=defaults[CONF_OPENPLANTBOOK_PID])] = selector.TextSelector()
     schema[vol.Optional(CONF_OPENPLANTBOOK_SYNC_IMAGE, default=defaults[CONF_OPENPLANTBOOK_SYNC_IMAGE])] = selector.BooleanSelector()

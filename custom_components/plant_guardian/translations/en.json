@@ -9,6 +9,7 @@
           "plant_name": "Plant name",
           "species": "Species (optional)",
           "image_url": "Image URL (optional)",
+          "cache_images_locally": "Cache images locally for reliable dashboards",
           "openplantbook_enabled": "Enable OpenPlantbook sync",
           "openplantbook_pid": "OpenPlantbook PID override (optional)",
           "openplantbook_sync_image": "Use OpenPlantbook image when no manual image is set",
@@ -41,6 +42,7 @@
         "data": {
           "species": "Species (optional)",
           "image_url": "Image URL (optional)",
+          "cache_images_locally": "Cache images locally for reliable dashboards",
           "openplantbook_enabled": "Enable OpenPlantbook sync",
           "openplantbook_pid": "OpenPlantbook PID override (optional)",
           "openplantbook_sync_image": "Use OpenPlantbook image when no manual image is set",
