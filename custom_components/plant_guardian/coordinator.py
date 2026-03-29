@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 import shutil
 from typing import Any
-from urllib.parse import quote, urlsplit, urlunsplit
+from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN, UnitOfTemperature
@@ -329,7 +329,8 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
             target_path.parent.mkdir(parents=True, exist_ok=True)
 
             if image_url.startswith("/local/"):
-                source_path = Path(self.hass.config.path("www")) / image_url.removeprefix("/local/")
+                local_relative_path = unquote(image_url.removeprefix("/local/"))
+                source_path = Path(self.hass.config.path("www")) / local_relative_path
                 if not source_path.exists():
                     return None
                 if source_path.resolve() != target_path.resolve():
