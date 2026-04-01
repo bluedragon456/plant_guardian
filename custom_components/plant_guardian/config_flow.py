@@ -34,6 +34,11 @@ from .const import (
     DEFAULT_WATERING_INTERVAL_DAYS,
     DOMAIN,
 )
+from .openplantbook import OpenPlantbookSearchMatch, async_search_species
+
+CONF_USE_OPENPLANTBOOK_LOOKUP = "use_openplantbook_lookup"
+CONF_OPENPLANTBOOK_QUERY = "openplantbook_query"
+CONF_OPENPLANTBOOK_MATCH = "openplantbook_match"
 
 
 def _cleanup_optional_fields(user_input: dict[str, Any]) -> dict[str, Any]:
@@ -65,7 +70,7 @@ def _normalize_defaults(defaults: dict[str, Any] | None = None) -> dict[str, Any
         CONF_PLANT_NAME: str(data.get(CONF_PLANT_NAME) or ""),
         CONF_SPECIES: str(data.get(CONF_SPECIES) or ""),
         CONF_IMAGE_URL: str(data.get(CONF_IMAGE_URL) or ""),
-        CONF_CACHE_IMAGES_LOCALLY: bool(data.get(CONF_CACHE_IMAGES_LOCALLY, False)),
+        CONF_CACHE_IMAGES_LOCALLY: bool(data.get(CONF_CACHE_IMAGES_LOCALLY, True)),
         CONF_OPENPLANTBOOK_ENABLED: bool(data.get(CONF_OPENPLANTBOOK_ENABLED, False)),
         CONF_OPENPLANTBOOK_PID: str(data.get(CONF_OPENPLANTBOOK_PID) or ""),
         CONF_OPENPLANTBOOK_SYNC_IMAGE: bool(data.get(CONF_OPENPLANTBOOK_SYNC_IMAGE, True)),
@@ -98,7 +103,55 @@ def _add_optional_entity_selector(schema: dict, key: str, defaults: dict[str, An
         )
 
 
-def _build_schema(defaults: dict[str, Any] | None = None, *, include_name: bool = True) -> vol.Schema:
+def _build_user_schema(defaults: dict[str, Any] | None = None) -> vol.Schema:
+    defaults = dict(defaults or {})
+    return vol.Schema(
+        {
+            vol.Required(CONF_PLANT_NAME, default=str(defaults.get(CONF_PLANT_NAME) or "")): selector.TextSelector(),
+            vol.Required(
+                CONF_USE_OPENPLANTBOOK_LOOKUP,
+                default=bool(defaults.get(CONF_USE_OPENPLANTBOOK_LOOKUP, True)),
+            ): selector.BooleanSelector(),
+        }
+    )
+
+
+def _build_lookup_schema(default_query: str) -> vol.Schema:
+    return vol.Schema(
+        {
+            vol.Required(CONF_OPENPLANTBOOK_QUERY, default=default_query): selector.TextSelector(),
+        }
+    )
+
+
+def _build_match_schema(
+    matches: list[OpenPlantbookSearchMatch],
+    selected_pid: str | None = None,
+) -> vol.Schema:
+    options = [
+        {
+            "value": match.pid,
+            "label": f"{match.display_name} ({match.pid})",
+        }
+        for match in matches
+    ]
+
+    return vol.Schema(
+        {
+            vol.Required(
+                CONF_OPENPLANTBOOK_MATCH,
+                default=selected_pid or matches[0].pid,
+            ): selector.SelectSelector(
+                selector.SelectSelectorConfig(
+                    options=options,
+                    mode=selector.SelectSelectorMode.DROPDOWN,
+                )
+            )
+        }
+    )
+
+
+def _build_details_schema(defaults: dict[str, Any] | None = None, *, include_name: bool = True) -> vol.Schema:
     defaults = _normalize_defaults(defaults)
     schema: dict = {}
 
@@ -152,6 +205,11 @@ def _build_schema(defaults: dict[str, Any] | None = None, *, include_name: bool 
 class PlantGuardianConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
+    def __init__(self) -> None:
+        self._config_data: dict[str, Any] = {}
+        self._openplantbook_matches: list[OpenPlantbookSearchMatch] = []
+        self._openplantbook_query = ""
+
     @staticmethod
     @callback
     def async_get_options_flow(
@@ -163,23 +221,109 @@ class PlantGuardianConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            user_input = dict(user_input)
-            plant_name = user_input[CONF_PLANT_NAME].strip()
+            plant_name = str(user_input[CONF_PLANT_NAME]).strip()
+            use_openplantbook_lookup = bool(user_input[CONF_USE_OPENPLANTBOOK_LOOKUP])
 
             if not plant_name:
                 errors[CONF_PLANT_NAME] = "required"
-            elif user_input[CONF_TEMP_MIN] > user_input[CONF_TEMP_MAX]:
-                errors["base"] = "temp_range_invalid"
+            elif use_openplantbook_lookup and not self.hass.services.has_service("openplantbook", "search"):
+                errors["base"] = "openplantbook_unavailable"
             else:
-                user_input = _cleanup_optional_fields(user_input)
                 await self.async_set_unique_id(plant_name.lower())
                 self._abort_if_unique_id_configured()
-                user_input[CONF_PLANT_NAME] = plant_name
-                return self.async_create_entry(title=plant_name, data=user_input)
+                self._config_data = _normalize_defaults({CONF_PLANT_NAME: plant_name})
+
+                if use_openplantbook_lookup:
+                    self._config_data.update(
+                        {
+                            CONF_OPENPLANTBOOK_ENABLED: True,
+                            CONF_OPENPLANTBOOK_SYNC_IMAGE: True,
+                            CONF_OPENPLANTBOOK_SYNC_CARE: True,
+                        }
+                    )
+                    return await self.async_step_openplantbook_lookup()
+
+                return await self.async_step_details()
 
         return self.async_show_form(
             step_id="user",
-            data_schema=_build_schema(user_input, include_name=True),
+            data_schema=_build_user_schema(user_input),
+            errors=errors,
+        )
+
+    async def async_step_openplantbook_lookup(self, user_input: dict[str, Any] | None = None):
+        errors: dict[str, str] = {}
+        default_query = self._openplantbook_query or self._config_data.get(CONF_PLANT_NAME, "")
+
+        if user_input is not None:
+            query = str(user_input[CONF_OPENPLANTBOOK_QUERY]).strip()
+            if not query:
+                errors[CONF_OPENPLANTBOOK_QUERY] = "required"
+            else:
+                self._openplantbook_query = query
+                self._openplantbook_matches = await async_search_species(self.hass, query)
+                if self._openplantbook_matches:
+                    return await self.async_step_openplantbook_match()
+                errors["base"] = "openplantbook_no_matches"
+
+        return self.async_show_form(
+            step_id="openplantbook_lookup",
+            data_schema=_build_lookup_schema(default_query),
+            errors=errors,
+        )
+
+    async def async_step_openplantbook_match(self, user_input: dict[str, Any] | None = None):
+        errors: dict[str, str] = {}
+
+        if not self._openplantbook_matches:
+            return await self.async_step_openplantbook_lookup()
+
+        if user_input is not None:
+            selected_pid = str(user_input[CONF_OPENPLANTBOOK_MATCH])
+            match = next(
+                (candidate for candidate in self._openplantbook_matches if candidate.pid == selected_pid),
+                None,
+            )
+            if match is None:
+                errors["base"] = "openplantbook_match_invalid"
+            else:
+                self._config_data.update(
+                    {
+                        CONF_SPECIES: match.display_name,
+                        CONF_OPENPLANTBOOK_PID: match.pid,
+                        CONF_OPENPLANTBOOK_ENABLED: True,
+                        CONF_OPENPLANTBOOK_SYNC_IMAGE: True,
+                        CONF_OPENPLANTBOOK_SYNC_CARE: True,
+                    }
+                )
+                return await self.async_step_details()
+
+        return self.async_show_form(
+            step_id="openplantbook_match",
+            data_schema=_build_match_schema(
+                self._openplantbook_matches,
+                user_input.get(CONF_OPENPLANTBOOK_MATCH) if user_input else None,
+            ),
+            errors=errors,
+        )
+
+    async def async_step_details(self, user_input: dict[str, Any] | None = None):
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            user_input = dict(user_input)
+            if user_input[CONF_TEMP_MIN] > user_input[CONF_TEMP_MAX]:
+                errors["base"] = "temp_range_invalid"
+            else:
+                data = _cleanup_optional_fields({**self._config_data, **user_input})
+                plant_name = str(self._config_data[CONF_PLANT_NAME]).strip()
+                data[CONF_PLANT_NAME] = plant_name
+                return self.async_create_entry(title=plant_name, data=data)
+
+        defaults = _normalize_defaults(self._config_data | (user_input or {}))
+        return self.async_show_form(
+            step_id="details",
+            data_schema=_build_details_schema(defaults, include_name=False),
             errors=errors,
         )
 
@@ -203,6 +347,6 @@ class PlantGuardianOptionsFlow(config_entries.OptionsFlow):
         defaults = _normalize_defaults({**self._config_entry.data, **self._config_entry.options})
         return self.async_show_form(
             step_id="init",
-            data_schema=_build_schema(defaults, include_name=False),
+            data_schema=_build_details_schema(defaults, include_name=False),
             errors=errors,
         )

@@ -19,6 +19,7 @@ from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
 
 from .const import (
+    CACHED_IMAGE_FOLDER,
     CONF_CACHE_IMAGES_LOCALLY,
     CONF_FERTILIZING_INTERVAL_DAYS,
     CONF_IMAGE_URL,
@@ -295,22 +296,56 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
     async def _resolve_image(self, openplantbook) -> tuple[str | None, str | None]:
         image_url = self._conf(CONF_IMAGE_URL)
         sync_image = bool(self._conf(CONF_OPENPLANTBOOK_SYNC_IMAGE))
-        cache_images_locally = bool(self._conf(CONF_CACHE_IMAGES_LOCALLY))
+        cache_images_locally = self._conf(CONF_CACHE_IMAGES_LOCALLY)
+        if cache_images_locally is None:
+            cache_images_locally = True
+        else:
+            cache_images_locally = bool(cache_images_locally)
 
         if image_url:
             resolved_url = _normalize_image_url(image_url)
+            _LOGGER.debug("Resolved plant image source for %s from user config: %s", self.entry.title, resolved_url)
             if cache_images_locally:
                 cached_url = await self._async_cache_image(resolved_url)
                 if cached_url:
+                    _LOGGER.debug(
+                        "Using cached local image for %s: source=%s display=%s",
+                        self.entry.title,
+                        resolved_url,
+                        cached_url,
+                    )
                     return cached_url, "user_cached"
+                _LOGGER.debug(
+                    "Local image caching enabled for %s but cache write failed for source=%s",
+                    self.entry.title,
+                    resolved_url,
+                )
+                return None, None
+
+            _LOGGER.debug("Using direct image path for %s because local caching is disabled: %s", self.entry.title, resolved_url)
             return resolved_url, "user"
 
         if sync_image and openplantbook and openplantbook.image_url:
             resolved_url = _normalize_image_url(openplantbook.image_url)
+            _LOGGER.debug("Resolved plant image source for %s from OpenPlantbook: %s", self.entry.title, resolved_url)
             if cache_images_locally:
                 cached_url = await self._async_cache_image(resolved_url)
                 if cached_url:
+                    _LOGGER.debug(
+                        "Using cached local image for %s: source=%s display=%s",
+                        self.entry.title,
+                        resolved_url,
+                        cached_url,
+                    )
                     return cached_url, "openplantbook_cached"
+                _LOGGER.debug(
+                    "Local image caching enabled for %s but cache write failed for source=%s",
+                    self.entry.title,
+                    resolved_url,
+                )
+                return None, None
+
+            _LOGGER.debug("Using direct OpenPlantbook image for %s because local caching is disabled: %s", self.entry.title, resolved_url)
             return resolved_url, "openplantbook"
 
         return None, None
@@ -322,16 +357,27 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
         source = urlsplit(image_url)
         extension = _guess_image_extension(source.path)
         plant_slug = slugify(self.entry.title or self._conf(CONF_PLANT_NAME) or "plant")
-        relative_path = Path("plant_guardian") / f"{plant_slug}{extension}"
+        relative_path = Path(CACHED_IMAGE_FOLDER) / f"{plant_slug}{extension}"
         target_path = Path(self.hass.config.path("www")) / relative_path
 
         try:
             target_path.parent.mkdir(parents=True, exist_ok=True)
+            await self.hass.async_add_executor_job(
+                _cleanup_legacy_cached_images,
+                target_path.parent,
+                plant_slug,
+                target_path.name,
+            )
 
             if image_url.startswith("/local/"):
                 local_relative_path = unquote(image_url.removeprefix("/local/"))
                 source_path = Path(self.hass.config.path("www")) / local_relative_path
                 if not source_path.exists():
+                    _LOGGER.debug(
+                        "Local image cache source missing for %s: %s",
+                        self.entry.title,
+                        source_path,
+                    )
                     return None
                 if source_path.resolve() != target_path.resolve():
                     await self.hass.async_add_executor_job(shutil.copyfile, source_path, target_path)
@@ -339,15 +385,23 @@ class PlantGuardianCoordinator(DataUpdateCoordinator[PlantData]):
                 session = async_get_clientsession(self.hass)
                 async with session.get(image_url) as response:
                     if response.status != 200:
+                        _LOGGER.debug(
+                            "Remote image download failed for %s: %s returned %s",
+                            self.entry.title,
+                            image_url,
+                            response.status,
+                        )
                         return None
                     content = await response.read()
                 await self.hass.async_add_executor_job(target_path.write_bytes, content)
             else:
+                _LOGGER.debug("Unsupported image cache source for %s: %s", self.entry.title, image_url)
                 return None
         except Exception:  # noqa: BLE001
             _LOGGER.debug("Unable to cache image for %s from %s", self.entry.title, image_url, exc_info=True)
             return None
 
+        _LOGGER.debug("Saved cached image for %s to %s", self.entry.title, target_path)
         return f"/local/{relative_path.as_posix()}"
 
     def _resolve_care_config(
@@ -555,3 +609,17 @@ def _guess_image_extension(path: str) -> str:
     if suffix in {".jpg", ".jpeg", ".png", ".gif", ".webp"}:
         return suffix
     return ".jpg"
+
+
+def _cleanup_legacy_cached_images(folder: Path, plant_slug: str, keep_filename: str) -> None:
+    if not folder.exists():
+        return
+
+    for candidate in folder.iterdir():
+        if not candidate.is_file():
+            continue
+        if candidate.name == keep_filename:
+            continue
+        if candidate.stem != plant_slug:
+            continue
+        candidate.unlink(missing_ok=True)

@@ -4,9 +4,30 @@
     "step": {
       "user": {
         "title": "Add plant",
-        "description": "Create a tracked plant using your existing Home Assistant sensors.",
+        "description": "Start by naming your plant and decide whether to use OpenPlantBook to find a species match.",
         "data": {
           "plant_name": "Plant name",
+          "use_openplantbook_lookup": "Use OpenPlantBook species lookup"
+        }
+      },
+      "openplantbook_lookup": {
+        "title": "Find species",
+        "description": "Search OpenPlantBook using a common or scientific plant name.",
+        "data": {
+          "openplantbook_query": "Plant name to search"
+        }
+      },
+      "openplantbook_match": {
+        "title": "Choose species",
+        "description": "Select the closest OpenPlantBook match for your plant.",
+        "data": {
+          "openplantbook_match": "Species match"
+        }
+      },
+      "details": {
+        "title": "Plant details",
+        "description": "Review the matched species, image settings, and care thresholds before saving.",
+        "data": {
           "species": "Species (optional)",
           "image_url": "Image URL (optional)",
           "cache_images_locally": "Cache images locally for reliable dashboards",
@@ -28,7 +49,10 @@
     },
     "error": {
       "temp_range_invalid": "Minimum temperature must be less than or equal to maximum temperature.",
-      "required": "This field is required."
+      "required": "This field is required.",
+      "openplantbook_unavailable": "OpenPlantBook search is not available right now. Finish setup manually or enable the OpenPlantBook integration first.",
+      "openplantbook_no_matches": "No OpenPlantBook matches were found. Try a different plant name.",
+      "openplantbook_match_invalid": "Select one of the returned OpenPlantBook matches."
     },
     "abort": {
       "already_configured": "This plant already exists."

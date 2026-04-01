@@ -38,6 +38,12 @@ class OpenPlantbookPlantDetails:
     fertilizing_interval_days: int | None = None
 
 
+@dataclass(slots=True)
+class OpenPlantbookSearchMatch:
+    pid: str
+    display_name: str
+
+
 class OpenPlantbookClient:
     """Resolve plant details through Home Assistant's OpenPlantbook services."""
 
@@ -146,39 +152,25 @@ class OpenPlantbookClient:
         )
 
     async def _async_resolve_pid(self, query: str) -> str | None:
-        if not self.hass.services.has_service(OPENPLANTBOOK_DOMAIN, SERVICE_SEARCH):
-            return None
-
-        await self.hass.services.async_call(
-            OPENPLANTBOOK_DOMAIN,
-            SERVICE_SEARCH,
-            {"alias": query},
-            blocking=True,
-        )
-
-        search_result = self.hass.states.get(SEARCH_RESULT_ENTITY_ID)
-        if search_result is None:
-            return None
-
-        attrs = dict(search_result.attributes)
-        if not attrs:
+        matches = await async_search_species(self.hass, query)
+        if not matches:
             return None
 
         normalized_query = query.casefold()
 
-        for candidate_pid, candidate_name in attrs.items():
-            if str(candidate_pid).casefold() == normalized_query:
-                return str(candidate_pid)
-            if str(candidate_name).casefold() == normalized_query:
-                return str(candidate_pid)
+        for match in matches:
+            if match.pid.casefold() == normalized_query:
+                return match.pid
+            if match.display_name.casefold() == normalized_query:
+                return match.pid
 
-        for candidate_pid, candidate_name in attrs.items():
-            if normalized_query in str(candidate_pid).casefold():
-                return str(candidate_pid)
-            if normalized_query in str(candidate_name).casefold():
-                return str(candidate_pid)
+        for match in matches:
+            if normalized_query in match.pid.casefold():
+                return match.pid
+            if normalized_query in match.display_name.casefold():
+                return match.pid
 
-        return next(iter(attrs), None)
+        return matches[0].pid
 
     async def _async_get_species_state(self, pid: str):
         entity_id = f"{OPENPLANTBOOK_DOMAIN}.{slugify(pid)}"
@@ -193,6 +185,43 @@ class OpenPlantbookClient:
             blocking=True,
         )
         return self.hass.states.get(entity_id)
+
+
+async def async_search_species(
+    hass: HomeAssistant,
+    query: str,
+) -> list[OpenPlantbookSearchMatch]:
+    cleaned_query = _clean_text(query)
+    if not cleaned_query:
+        return []
+
+    if not hass.services.has_service(OPENPLANTBOOK_DOMAIN, SERVICE_SEARCH):
+        return []
+
+    await hass.services.async_call(
+        OPENPLANTBOOK_DOMAIN,
+        SERVICE_SEARCH,
+        {"alias": cleaned_query},
+        blocking=True,
+    )
+
+    search_result = hass.states.get(SEARCH_RESULT_ENTITY_ID)
+    if search_result is None:
+        return []
+
+    attrs = dict(search_result.attributes)
+    if not attrs:
+        return []
+
+    matches: list[OpenPlantbookSearchMatch] = []
+    for candidate_pid, candidate_name in attrs.items():
+        pid = _clean_text(candidate_pid)
+        if not pid:
+            continue
+        display_name = _clean_text(candidate_name) or pid
+        matches.append(OpenPlantbookSearchMatch(pid=pid, display_name=display_name))
+
+    return matches
 
 
 def _clean_text(value: Any) -> str | None:

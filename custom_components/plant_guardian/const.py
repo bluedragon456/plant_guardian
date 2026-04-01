@@ -32,6 +32,7 @@ CONF_OPENPLANTBOOK_ENABLED = "openplantbook_enabled"
 CONF_OPENPLANTBOOK_PID = "openplantbook_pid"
 CONF_OPENPLANTBOOK_SYNC_IMAGE = "openplantbook_sync_image"
 CONF_OPENPLANTBOOK_SYNC_CARE = "openplantbook_sync_care"
+CACHED_IMAGE_FOLDER = "plant_guardian"
 
 DEFAULT_MOISTURE_MIN = 25.0
 DEFAULT_LIGHT_MIN = 300.0
