@@ -22,7 +22,7 @@ views:
             heading_style: title
             icon: mdi:leaf-circle-outline
           - type: picture-entity
-            entity: image.monstera_deliciosa_image
+            entity: sensor.monstera_deliciosa_status
             name: Monstera Deliciosa
             show_name: true
             show_state: false

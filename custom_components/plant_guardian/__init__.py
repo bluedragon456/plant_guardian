@@ -73,14 +73,12 @@ async def async_update_options(hass: HomeAssistant, entry: PlantGuardianConfigEn
 
 def _async_cleanup_stale_image_entities(hass: HomeAssistant, entry: PlantGuardianConfigEntry) -> None:
     entity_registry = er.async_get(hass)
-    expected_unique_id = f"{entry.entry_id}_image"
 
     for entity_entry in er.async_entries_for_config_entry(entity_registry, entry.entry_id):
         if entity_entry.domain != "image":
             continue
 
-        if entity_entry.unique_id != expected_unique_id:
-            entity_registry.async_remove(entity_entry.entity_id)
+        entity_registry.async_remove(entity_entry.entity_id)
 
 
 def _async_register_services(hass: HomeAssistant) -> None:
